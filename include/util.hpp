@@ -26,5 +26,11 @@ void toString(const std::vector<T>& v, std::string& ret)
         ret[i] = (char)(v[i]);
 }
 
+template <typename T>
+void apply(const std::map<std::string,unsigned int>& correspondancesColumns, std::map<std::string, std::function<T(const std::vector<unsigned char>&)> >& toApply, std::vector<std::vector<std::vector<unsigned char> > >& toBeModified)
+{
+
+}
+
 
 #endif

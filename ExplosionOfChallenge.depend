@@ -23,3 +23,25 @@
 1456430242 source:/home/alkanor/Bureau/Challenge_SD205/ExplosionOfChallenge/src/util.cpp
 	"../include/util.hpp"
 
+1456488620 source:c:\users\julien\documents\git\refactored-garbanzo\main.cpp
+	<iostream>
+	"include/ThreadedOperations.hpp"
+
+1456488620 c:\users\julien\documents\git\refactored-garbanzo\include\threadedoperations.hpp
+	<unordered_map>
+	<thread>
+	<vector>
+	<mutex>
+	"util.hpp"
+
+1456488620 c:\users\julien\documents\git\refactored-garbanzo\include\util.hpp
+	<iostream>
+	<fstream>
+	<vector>
+
+1456488620 source:c:\users\julien\documents\git\refactored-garbanzo\src\threadedoperations.cpp
+	"../include/ThreadedOperations.hpp"
+
+1456488620 source:c:\users\julien\documents\git\refactored-garbanzo\src\util.cpp
+	"../include/util.hpp"
+

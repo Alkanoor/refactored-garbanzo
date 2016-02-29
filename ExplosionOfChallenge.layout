@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_layout_file>
+	<ActiveTarget name="Release" />
+	<File name="include\ThreadedOperations.hpp" open="1" top="0" tabpos="3">
+		<Cursor position="148" topLine="0" />
+	</File>
+	<File name="include\util.hpp" open="1" top="0" tabpos="2">
+		<Cursor position="862" topLine="0" />
+	</File>
+	<File name="main.cpp" open="1" top="1" tabpos="1">
+		<Cursor position="5448" topLine="105" />
+	</File>
+</CodeBlocks_layout_file>
