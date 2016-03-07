@@ -9,6 +9,7 @@
 
 bool read(const std::string& path, std::vector<unsigned char>& ret);
 unsigned int loadInVec(const std::vector<unsigned char>& in, std::vector<std::vector<unsigned char> >& ret, unsigned char separator = '\n');
+unsigned int loadInString(const std::vector<unsigned char>& in, std::vector<std::string>& ret, unsigned char separator = '\n');
 
 template <typename T>
 void print(const std::vector<T>& v)

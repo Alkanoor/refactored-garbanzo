@@ -32,6 +32,7 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="include\LoadAndSave.hpp" />
 		<Unit filename="include\ThreadedOperations.hpp" />
 		<Unit filename="include\util.hpp" />
 		<Unit filename="main.cpp" />
