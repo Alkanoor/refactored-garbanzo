@@ -12,25 +12,45 @@ template <typename T>
 class LoadAndSave
 {
     public:
+        ///chargement des données brutes (fichier train.csv, test.csv, ...)
         void loadRaw(const std::string& path, char separator = ';');
+        ///chargement uniquement des données déjà prétraitées (il est nécessaire de spécifier le nombre de colonnes)
         void loadFloat(const std::string& path, unsigned int numberColumns);
+        ///chargement uniquement des titres des colonnes (utile avec la méthode précédente qui importe uniquement les données)
         void loadTitles(const std::string& path);
+
+        ///sauvegarde toutes données brutes (prenant en compte les trous et les resize, pour générer de nouveaux jeux de données éventuellement troués)
         void saveRaw(const std::string& path);
+        ///sauvegarde toutes données traitées ou semi-traitées (prenant en compte les trous et resize)
         void saveFloat(const std::string& path);
+        ///sauvegarde les données brutes actuellement traitées (prenant en compte les trous et les resize, pour générer de nouveaux jeux de données éventuellement troués)
+        void saveCurrentRaw(const std::string& path);
+        ///sauvegarde les données traitées (prenant en compte les trous et resize)
+        void saveCurrentFloat(const std::string& path);
+        ///sauvegarde des titres des colonnes actuellement traitées
         void saveTitles(const std::string& path);
 
+        ///crée des trous artificiels attendant d'être utilisés plus tard
         void createHoles(const std::map<std::string,float>& probaHolesInColumn);
+        ///met à jour la map permettant de convertir les string en float selon des politiques définies en dehors de cette classe
         void setConversionArray(const std::map<std::string,std::function<T(std::string)> >& howToConvert);
 
+        ///choisit les colonnes sur lesquelles travailler
         void chooseColumns(const std::vector<std::string>& namesToKeep);
+        ///met à jour (avec trous et politiques) les données les données flottantes à partir des données string
         void updateChosenColumns();
+        ///compte les singularités en leur assignant un label défini par l'utilisateur
         const std::map<std::string,std::map<std::string,unsigned int> >& countAbnormal(const std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols);
+        ///crée les histogrammes des données en prenant en compte ou non les données "anormales"
         void computeHistogramsOnChosenColumns(bool considerAbnormal = false);
+        ///remplace les données "anormales" par d'autres données en fonction d'une politique parmi 3 se basant sur la fréquence de ces anomalies
         void replaceAbnormalInFloat(const std::map<std::string,std::map<std::string,BEHAVIOUR> >& behaviour);
 
+        ///écrit dans le fichier associé les histogrammes des colonnes actuellement traitées et les données anormales remarquées
         void saveDensity(const std::vector<std::string>& columns, const std::string& path);
+        ///convertit les données en données pour dlib
         template <size_t N>
-        matrix<T,N,1> convertToDlibMatrix(const std::array<std::string,N>& columns);
+        void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<matrix<T,N,1> >& samples, std::vector<T>& labels);
 
         unsigned int getNumberRows() const;
         unsigned int getNumberColumnsRaw() const;
@@ -144,10 +164,17 @@ void LoadAndSave<T>::saveRaw(const std::string& path)
     for(unsigned int i=0;i<N_features;i++)
     {
         for(unsigned int j=0;j<N_parameters;j++)
-            if(j<N_parameters-1)
-                ofs<<rawDataColumnsOrdered[j][i]<<";";
+            if(noHoleColumnsOrdered[j][i])
+            {
+                if(j<N_parameters-1)
+                    ofs<<rawDataColumnsOrdered[j][i]<<";";
+                else
+                    ofs<<rawDataColumnsOrdered[j][i];
+            }
             else
-                ofs<<rawDataColumnsOrdered[j][i];
+                if(j<N_parameters-1)
+                    ofs<<";";
+
         ofs<<std::endl;
     }
     ofs.close();
@@ -160,10 +187,70 @@ void LoadAndSave<T>::saveFloat(const std::string& path)
     for(unsigned int i=0;i<N_features;i++)
     {
         for(unsigned int j=0;j<N_parameters;j++)
-            if(j<N_parameters-1)
-                ofs<<transformedDataColumnsOrdered[j][i]<<" ";
+            if(noHoleColumnsOrdered[j][i])
+            {
+                if(j<N_parameters-1)
+                    ofs<<transformedDataColumnsOrdered[j][i]<<" ";
+                else
+                    ofs<<transformedDataColumnsOrdered[j][i];
+            }
             else
-                ofs<<transformedDataColumnsOrdered[j][i];
+                if(j<N_parameters-1)
+                    ofs<<" -999999999 ";
+        ofs<<std::endl;
+    }
+    ofs.close();
+}
+
+template <typename T>
+void LoadAndSave<T>::saveCurrentRaw(const std::string& path)
+{
+    std::ofstream ofs(path.c_str(),std::ios::out|std::ios::trunc);
+
+    std::vector<unsigned int> index(chosenColumns.size());
+    for(unsigned int i=0;i<chosenColumns.size();i++)
+        index[i] = columnNamesCorrespondances[chosenColumns[i]];
+
+    for(unsigned int i=0;i<N_features;i++)
+    {
+        for(unsigned int j=0;j<index.size();j++)
+            if(noHoleColumnsOrdered[index[j]][i])
+            {
+                if(j<index.size()-1)
+                    ofs<<rawDataColumnsOrdered[index[j]][i]<<";";
+                else
+                    ofs<<rawDataColumnsOrdered[index[j]][i];
+            }
+            else
+                if(j<index.size()-1)
+                    ofs<<";";
+        ofs<<std::endl;
+    }
+    ofs.close();
+}
+
+template <typename T>
+void LoadAndSave<T>::saveCurrentFloat(const std::string& path)
+{
+    std::ofstream ofs(path.c_str(),std::ios::out|std::ios::trunc);
+
+    std::vector<unsigned int> index(chosenColumns.size());
+    for(unsigned int i=0;i<chosenColumns.size();i++)
+        index[i] = columnNamesCorrespondances[chosenColumns[i]];
+
+    for(unsigned int i=0;i<N_features;i++)
+    {
+        for(unsigned int j=0;j<chosenColumns.size();j++)
+            if(noHoleColumnsOrdered[index[j]][i])
+            {
+                if(j<index.size()-1)
+                    ofs<<transformedDataColumnsOrdered[index[j]][i]<<" ";
+                else
+                    ofs<<transformedDataColumnsOrdered[index[j]][i];
+            }
+            else
+                if(j<index.size()-1)
+                    ofs<<" -999999999 ";
         ofs<<std::endl;
     }
     ofs.close();
@@ -173,12 +260,12 @@ template <typename T>
 void LoadAndSave<T>::saveTitles(const std::string& path)
 {
     std::ofstream ofs(path.c_str(),std::ios::out|std::ios::trunc);
-    for(unsigned int i=0;i<N_parameters;i++)
+    for(unsigned int i=0;i<chosenColumns.size();i++)
     {
-        if(j<N_parameters-1)
-            ofs<<columnNames[i]<<" ";
+        if(j<chosenColumns.size()-1)
+            ofs<<columnNames[columnNamesCorrespondances[chosenColumns[i]]]<<" ";
         else
-            ofs<<columnNames[i];
+            ofs<<columnNames[columnNamesCorrespondances[chosenColumns[i]]];
     }
     ofs.close();
 }
@@ -344,21 +431,24 @@ void LoadAndSave<T>::saveDensity(const std::vector<std::string>& columns, const 
 
 template <typename T>
 template <size_t N>
-std::vector<matrix<T,N,1> > LoadAndSave<T>::convertToDlibMatrix(const std::array<std::string,N>& columns)
+void LoadAndSave<T>::convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<matrix<T,N,1> >& samples, std::vector<T>& labels);
 {
     std::array<unsigned int,N> corresp;
-    std::vector<matrix<T,N,1> > ret(N_features);
+    samples.resize(N_features);
+    labels.resize(N_features);
     matrix<T,N,1> tmp;
 
     for(unsigned int i=0;i<N;i++)
         corresp[i] = columnNamesCorrespondances[columns[i]];
+    unsigned int targetColumn = columnNamesCorrespondances[labelColumn];
     for(unsigned int j=0;j<N_features;j++)
     {
         for(unsigned int i=0;i<N;i++)
             tmp[i] = transformedDataColumnsOrdered[corresp[i]][j];
-        ret[j] = tmp;
+        samples[j] = tmp;
+        labels[j] = transformedDataColumnsOrdered[targetColumn][j];
     }
-    return ret;
+    return samples;
 }
 
 template <typename T>
