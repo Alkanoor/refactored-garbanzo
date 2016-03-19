@@ -2,6 +2,8 @@
 #define LOADANDSAVE_HPP_INCLUDED
 
 
+#include "Histogram.hpp"
+#include "Interval.hpp"
 #include "util.hpp"
 
 
@@ -387,11 +389,11 @@ void LoadAndSave<T>::replaceAbnormalInFloat(const std::map<std::string,std::map<
                             break;
                         case Nearest_float:
                             //on cherche dans l'histogramme l'antécédant le plus proche par rapport à la fréquence de l'anormal
-                            correspondancesForAbnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]] = histograms[chosenColumns[i]].getNearest(abnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]]);
+                            correspondancesForAbnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]] = histograms[chosenColumns[i]].getNearest((float)abnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]]/(float)N_features);
                             break;
                         case Mean_float:
                             //on cherche dans l'histogramme l'antécédant moyen par rapport à la fréquence de l'anormal
-                            correspondancesForAbnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]] = histograms[chosenColumns[i]].getMean(abnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]]);
+                            correspondancesForAbnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]] = histograms[chosenColumns[i]].getMean((float)abnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]]/(float)N_features);
                             break;
                         default:
                             std::cout<<"Be careful please, try to provide correct behaviours for every abnormal situation"<<std::endl;
