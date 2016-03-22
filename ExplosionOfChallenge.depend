@@ -23,9 +23,11 @@
 1456430242 source:/home/alkanor/Bureau/Challenge_SD205/ExplosionOfChallenge/src/util.cpp
 	"../include/util.hpp"
 
-1456488620 source:c:\users\julien\documents\git\refactored-garbanzo\main.cpp
+1458688409 source:c:\users\julien\documents\git\refactored-garbanzo\main.cpp
 	<iostream>
+	<map>
 	"include/ThreadedOperations.hpp"
+	"include/LoadAndSave.hpp"
 
 1456488620 c:\users\julien\documents\git\refactored-garbanzo\include\threadedoperations.hpp
 	<unordered_map>
@@ -34,7 +36,7 @@
 	<mutex>
 	"util.hpp"
 
-1456488620 c:\users\julien\documents\git\refactored-garbanzo\include\util.hpp
+1458419336 c:\users\julien\documents\git\refactored-garbanzo\include\util.hpp
 	<iostream>
 	<fstream>
 	<vector>
@@ -42,6 +44,20 @@
 1456488620 source:c:\users\julien\documents\git\refactored-garbanzo\src\threadedoperations.cpp
 	"../include/ThreadedOperations.hpp"
 
-1456488620 source:c:\users\julien\documents\git\refactored-garbanzo\src\util.cpp
+1458687006 source:c:\users\julien\documents\git\refactored-garbanzo\src\util.cpp
 	"../include/util.hpp"
+
+1458689241 c:\users\julien\documents\git\refactored-garbanzo\include\loadandsave.hpp
+	<dlib/svm.h>
+	"Histogram.hpp"
+	"Interval.hpp"
+	"util.hpp"
+
+1458687116 c:\users\julien\documents\git\refactored-garbanzo\include\histogram.hpp
+	<ostream>
+	<cmath>
+	"Interval.hpp"
+
+1458421015 c:\users\julien\documents\git\refactored-garbanzo\include\interval.hpp
+	<set>
 

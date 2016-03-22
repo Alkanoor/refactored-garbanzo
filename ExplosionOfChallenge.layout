@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <CodeBlocks_layout_file>
 	<ActiveTarget name="Release" />
-	<File name="include\Histogram.hpp" open="1" top="1" tabpos="7">
-		<Cursor position="2918" topLine="0" />
+	<File name="include\Histogram.hpp" open="1" top="0" tabpos="6">
+		<Cursor position="106" topLine="0" />
+	</File>
+	<File name="include\Interval.hpp" open="1" top="0" tabpos="7">
+		<Cursor position="784" topLine="96" />
 	</File>
 	<File name="include\LoadAndSave.hpp" open="1" top="0" tabpos="4">
-		<Cursor position="16023" topLine="348" />
+		<Cursor position="11753" topLine="258" />
 	</File>
 	<File name="include\ThreadedOperations.hpp" open="1" top="0" tabpos="3">
 		<Cursor position="346" topLine="0" />
@@ -13,10 +16,10 @@
 	<File name="include\util.hpp" open="1" top="0" tabpos="2">
 		<Cursor position="818" topLine="0" />
 	</File>
-	<File name="main.cpp" open="1" top="0" tabpos="1">
-		<Cursor position="3709" topLine="105" />
+	<File name="main.cpp" open="1" top="1" tabpos="1">
+		<Cursor position="335" topLine="0" />
 	</File>
 	<File name="src\util.cpp" open="1" top="0" tabpos="5">
-		<Cursor position="398" topLine="1" />
+		<Cursor position="2358" topLine="76" />
 	</File>
 </CodeBlocks_layout_file>

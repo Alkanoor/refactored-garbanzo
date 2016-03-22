@@ -2,6 +2,8 @@
 #define LOADANDSAVE_HPP_INCLUDED
 
 
+#include <dlib/svm.h>
+
 #include "Histogram.hpp"
 #include "Interval.hpp"
 #include "util.hpp"
@@ -33,7 +35,7 @@ class LoadAndSave
         void saveTitles(const std::string& path);
 
         ///crée des trous artificiels attendant d'être utilisés plus tard
-        void createHoles(const std::map<std::string,float>& probaHolesInColumn);
+        void createHoles(std::map<std::string,float>& probaHolesInColumn);
         ///met à jour la map permettant de convertir les string en float selon des politiques définies en dehors de cette classe
         void setConversionArray(const std::map<std::string,std::function<T(std::string)> >& howToConvert);
 
@@ -42,17 +44,17 @@ class LoadAndSave
         ///met à jour (avec trous et politiques) les données les données flottantes à partir des données string
         void updateChosenColumns();
         ///compte les singularités en leur assignant un label défini par l'utilisateur
-        const std::map<std::string,std::map<std::string,unsigned int> >& countAbnormal(const std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols);
+        const std::map<std::string,std::map<std::string,unsigned int> >& countAbnormal(std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols);
         ///crée les histogrammes des données en prenant en compte ou non les données "anormales"
         void computeHistogramsOnChosenColumns(bool considerAbnormal = false);
         ///remplace les données "anormales" par d'autres données en fonction d'une politique parmi 3 se basant sur la fréquence de ces anomalies
-        void replaceAbnormalInFloat(const std::map<std::string,std::map<std::string,BEHAVIOUR> >& behaviour);
+        void replaceAbnormalInFloat(std::map<std::string,std::map<std::string,BEHAVIOUR> >& behaviour);
 
         ///écrit dans le fichier associé les histogrammes des colonnes actuellement traitées et les données anormales remarquées
         void saveDensity(const std::vector<std::string>& columns, const std::string& path);
         ///convertit les données en données pour dlib
         template <size_t N>
-        void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<matrix<T,N,1> >& samples, std::vector<T>& labels);
+        void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels);
 
         unsigned int getNumberRows() const;
         unsigned int getNumberColumnsRaw() const;
@@ -71,6 +73,9 @@ class LoadAndSave
         std::map<std::string,std::map<Interval<T>, unsigned int> > counter;
         std::map<std::string,Histogram<T> > histograms;
         std::map<std::string,std::map<std::string,T> > correspondancesForAbnormal;
+
+        unsigned int N_features;
+        unsigned int N_parameters;
 };
 
 
@@ -85,10 +90,10 @@ void LoadAndSave<T>::loadRaw(const std::string& path, char separator)
     }
 
     std::vector<std::vector<unsigned char> > dataLearnSplit;
-    unsigned int N_features = loadInVec(dataLearn,dataLearnSplit);
+    N_features = loadInVec(dataLearn,dataLearnSplit);
 
     std::vector<std::string> line;
-    unsigned int N_parameters = loadInString(dataLearnSplit[0],line,separator);
+    N_parameters = loadInString(dataLearnSplit[0],line,separator);
     transformedDataColumnsOrdered.resize(N_parameters);
     rawDataColumnsOrdered.resize(N_parameters);
     noHoleColumnsOrdered.resize(N_parameters);
@@ -114,8 +119,8 @@ void LoadAndSave<T>::loadRaw(const std::string& path, char separator)
     ///On utilise la première ligne pour déterminer les noms des colonnes, on utilise les suivantes pour se faire une idée plus précise de la distribution des valeurs diverses que peuvent prendre les items d'une colonne
     for(unsigned int i=0;i<N_parameters;i++)
     {
-        columnNames.push_back(rawDataColumnsOrdered[0][i]);
-        columnNamesCorrespondances[rawDataColumnsOrdered[0][i]] = i;
+        columnNames.push_back(rawDataColumnsOrdered[i][0]);
+        columnNamesCorrespondances[rawDataColumnsOrdered[i][0]] = i;
     }
 }
 
@@ -124,8 +129,15 @@ void LoadAndSave<T>::loadFloat(const std::string& path, unsigned int numberColum
 {
     transformedDataColumnsOrdered.resize(numberColumns);
     noHoleColumnsOrdered.resize(numberColumns);
+    N_parameters = numberColumns;
+    N_features = 0;
     T tmp;
     std::ifstream ifs(path.c_str());
+    if(!ifs)
+    {
+        std::cout<<"Error loading floating data"<<std::endl;
+        exit(-1);
+    }
     unsigned int i=0, j=0;
     while(ifs>>tmp)
     {
@@ -136,6 +148,7 @@ void LoadAndSave<T>::loadFloat(const std::string& path, unsigned int numberColum
         {
             i = 0;
             j++;
+            N_features++;
             for(unsigned int k=0;k<numberColumns;k++)
             {
                 transformedDataColumnsOrdered[k].push_back(0);
@@ -157,12 +170,15 @@ void LoadAndSave<T>::loadTitles(const std::string& path)
         columnNamesCorrespondances[tmp] = i;
         i++;
     }
+
+    N_parameters = columnNames.size();
 }
 
 template <typename T>
 void LoadAndSave<T>::saveRaw(const std::string& path)
 {
     std::ofstream ofs(path.c_str(),std::ios::out|std::ios::trunc);
+
     for(unsigned int i=0;i<N_features;i++)
     {
         for(unsigned int j=0;j<N_parameters;j++)
@@ -264,7 +280,7 @@ void LoadAndSave<T>::saveTitles(const std::string& path)
     std::ofstream ofs(path.c_str(),std::ios::out|std::ios::trunc);
     for(unsigned int i=0;i<chosenColumns.size();i++)
     {
-        if(j<chosenColumns.size()-1)
+        if(i<chosenColumns.size()-1)
             ofs<<columnNames[columnNamesCorrespondances[chosenColumns[i]]]<<" ";
         else
             ofs<<columnNames[columnNamesCorrespondances[chosenColumns[i]]];
@@ -273,7 +289,7 @@ void LoadAndSave<T>::saveTitles(const std::string& path)
 }
 
 template <typename T>
-void LoadAndSave<T>::createHoles(const std::map<std::string,T>& probaHolesInColumn)
+void LoadAndSave<T>::createHoles(std::map<std::string,float>& probaHolesInColumn)
 {
     for(unsigned int i=0;i<N_parameters;i++)
     {
@@ -313,20 +329,20 @@ void LoadAndSave<T>::updateChosenColumns()
 }
 
 template <typename T>
-const std::map<std::string,std::map<std::string,unsigned int> >& LoadAndSave<T>::countAbnormal(const std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols)
+const std::map<std::string,std::map<std::string,unsigned int> >& LoadAndSave<T>::countAbnormal(std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols)
 {
     abnormal.clear();
     for(auto it=labelsOfAbnormalForCols.begin(); it!=labelsOfAbnormalForCols.end(); it++)
     {
         unsigned int col = columnNamesCorrespondances[it->first];
         for(unsigned int i=0;i<N_features;i++)
-        {
             if(it->second.count(rawDataColumnsOrdered[col][i]))
+            {
                 if(abnormal[it->first].count(it->second[rawDataColumnsOrdered[col][i]]))
                     abnormal[it->first][it->second[rawDataColumnsOrdered[col][i]]]++;
                 else
                     abnormal[it->first][it->second[rawDataColumnsOrdered[col][i]]] = 1;
-        }
+            }
     }
     return abnormal;
 }
@@ -366,7 +382,7 @@ void LoadAndSave<T>::computeHistogramsOnChosenColumns(bool considerAbnormal)
 }
 
 template <typename T>
-void LoadAndSave<T>::replaceAbnormalInFloat(const std::map<std::string,std::map<std::string,BEHAVIOUR> >& behaviour)
+void LoadAndSave<T>::replaceAbnormalInFloat(std::map<std::string,std::map<std::string,BEHAVIOUR> >& behaviour)
 {
     updateChosenColumns();
     computeHistogramsOnChosenColumns(false);
@@ -433,12 +449,12 @@ void LoadAndSave<T>::saveDensity(const std::vector<std::string>& columns, const 
 
 template <typename T>
 template <size_t N>
-void LoadAndSave<T>::convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<matrix<T,N,1> >& samples, std::vector<T>& labels);
+void LoadAndSave<T>::convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels)
 {
     std::array<unsigned int,N> corresp;
     samples.resize(N_features);
     labels.resize(N_features);
-    matrix<T,N,1> tmp;
+    dlib::matrix<T,N,1> tmp;
 
     for(unsigned int i=0;i<N;i++)
         corresp[i] = columnNamesCorrespondances[columns[i]];

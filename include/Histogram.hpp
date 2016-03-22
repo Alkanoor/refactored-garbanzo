@@ -3,6 +3,7 @@
 
 
 #include <ostream>
+#include <cmath>
 
 #include "Interval.hpp"
 
@@ -20,11 +21,21 @@ class Histogram
         T getNearest(float freq);
         T getMean(float freq);
 
+        template <typename U>
+        friend std::ostream& operator << (std::ostream& cur, const Histogram<U>& h);
+
     private:
         std::map<Interval<T>,float> intervals;
         T min, max;
         bool minSet, maxSet;
+
+        static int width, height;
 };
+
+template <typename T>
+int Histogram<T>::width = 20;
+template <typename T>
+int Histogram<T>::height = 10;
 
 template <typename T>
 Histogram<T>::Histogram() :
@@ -128,8 +139,29 @@ T Histogram<T>::getMean(float freq)
 }
 
 template <typename T>
-std::ostream operator << (const Histogram<T>& h)
+std::ostream& operator << (std::ostream& cur, const Histogram<T>& h)
 {
+    unsigned int c = 0;
+    auto it = h.intervals.begin();
+    for(; it!=h.intervals.end() && c+1<h.intervals.size(); )
+    {
+        cur<<"[ "<<it->first.left()<<" ; ";
+        float saved = it->second;
+        it++;
+        cur<<it->first.left()<<" ] :";
+        cur<<saved<<" with labels ";
+        for(unsigned int i=0;i<it->first.getLabels().size();i++)
+            cur<<it->first.getLabels()[i]<<" ";
+        cur<<std::endl;
+        c++;
+    }
+    cur<<"[ "<<it->first.left()<<" ; +inf ] :";
+    cur<<it->second<<" with labels ";
+    for(unsigned int i=0;i<it->first.getLabels().size();i++)
+        cur<<it->first.getLabels()[i]<<" ";
+    cur<<std::endl;
+    cur<<std::endl;
+    return cur;
 }
 
 

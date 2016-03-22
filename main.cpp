@@ -2,9 +2,24 @@
 #include <map>
 
 #include "include/ThreadedOperations.hpp"
+#include "include/LoadAndSave.hpp"
 
 
 int main()
+{
+    std::vector<std::string> columns = {"VOIE_DEPOT","COUNTRY","SOURCE_BEGIN_MONTH","LANGUAGE_OF_FILLING","APP_NB_PAYS"};
+    LoadAndSave<float> wrapper;
+    wrapper.loadRaw("../trainLittle.csv");
+    wrapper.chooseColumns(columns);
+    wrapper.saveRaw("raw.txt");
+    wrapper.saveCurrentRaw("currentRaw.txt");
+    wrapper.saveTitles("titles.txt");
+    return 0;
+}
+
+
+
+int autre()
 {
     std::vector<unsigned char> dataLearn;
     if(!read("../train.csv",dataLearn))

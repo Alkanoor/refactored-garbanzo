@@ -85,7 +85,8 @@ unsigned int loadInString(const std::vector<unsigned char>& in, std::vector<std:
 
     ret.resize(nbLines);
     unsigned int j=0,k=0;
-    std::vector<unsigned char> tmp(maxSize);
+    std::string tmp;
+    tmp.resize(maxSize);
     for(unsigned int i=0;i<s;i++)
     {
         if(in[i]==separator)
