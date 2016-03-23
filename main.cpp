@@ -8,12 +8,57 @@
 int main()
 {
     std::vector<std::string> columns = {"VOIE_DEPOT","COUNTRY","SOURCE_BEGIN_MONTH","LANGUAGE_OF_FILLING","APP_NB_PAYS"};
+
     LoadAndSave<float> wrapper;
+
     wrapper.loadRaw("../trainLittle.csv");
     wrapper.chooseColumns(columns);
     wrapper.saveRaw("raw.txt");
     wrapper.saveCurrentRaw("currentRaw.txt");
     wrapper.saveTitles("titles.txt");
+
+    std::map<std::string,float> probaHolesInColumn;
+    probaHolesInColumn["VOIE_DEPOT"] = 0.1;
+    probaHolesInColumn["COUNTRY"] = 0.05;
+    probaHolesInColumn["SOURCE_BEGIN_MONTH"] = 0.8;
+    probaHolesInColumn["LANGUAGE_OF_FILLING"] = 0.3;
+    probaHolesInColumn["APP_NB_PAYSerror"] = 0.2;
+
+    std::map<std::string,std::function<float(std::string)> >conversionMap;
+
+    wrapper.createHoles(probaHolesInColumn);
+    wrapper.setConversionArray(const std::map<std::string,std::function<T(std::string)> >& howToConvert);
+
+    ///choisit les colonnes sur lesquelles travailler
+    void chooseColumns(const std::vector<std::string>& namesToKeep);
+    ///met ï¿½ jour (avec trous et politiques) les donnï¿½es les donnï¿½es flottantes ï¿½ partir des donnï¿½es string
+    void updateChosenColumns();
+    ///compte les singularitï¿½s en leur assignant un label dï¿½fini par l'utilisateur
+    const std::map<std::string,std::map<std::string,unsigned int> >& countAbnormal(std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols);
+    ///crï¿½e les histogrammes des donnï¿½es en prenant en compte ou non les donnï¿½es "anormales"
+    void computeHistogramsOnChosenColumns(bool considerAbnormal = false);
+    ///remplace les donnï¿½es "anormales" par d'autres donnï¿½es en fonction d'une politique parmi 3 se basant sur la frï¿½quence de ces anomalies
+    void replaceAbnormalInFloat(std::map<std::string,std::map<std::string,BEHAVIOUR> >& behaviour);
+
+    ///ï¿½crit dans le fichier associï¿½ les histogrammes des colonnes actuellement traitï¿½es et les donnï¿½es anormales remarquï¿½es
+    void saveDensity(const std::vector<std::string>& columns, const std::string& path);
+    ///convertit les donnï¿½es en donnï¿½es pour dlib
+    template <size_t N>
+    void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels);
+
+    unsigned int getNumberRows() const;
+    unsigned int getNumberColumnsRaw() const;
+    unsigned int getCurrentNumberColumns() const;
+
+    wrapper.saveRaw("raw.txt");
+    wrapper.saveFloat("converted1.txt");
+    wrapper.saveCurrentRaw("currentRaw1.txt");
+    wrapper.saveCurrentFloat("converted1.txt");
+    wrapper.saveTitles("titles1.txt");
+
+    wrapper.loadTitles("titles1.txt");
+    wrapper.loadFloat("converted1.txt", wrapper.getNumberColumnsRaw());
+
     return 0;
 }
 
@@ -38,15 +83,15 @@ int autre()
     ThreadedOperations::join();*/
 
     std::vector<std::vector<unsigned char> > dataLearnSplit;
-    ///On sépare les données initiales par le retour à la ligne
+    ///On sï¿½pare les donnï¿½es initiales par le retour ï¿½ la ligne
     unsigned int N_features = loadInVec(dataLearn,dataLearnSplit);
 
-    ///On crée et remplit la matrice finale des données en séparant par les ";"
+    ///On crï¿½e et remplit la matrice finale des donnï¿½es en sï¿½parant par les ";"
     std::vector<std::vector<std::vector<unsigned char> > > finalDataset(N_features);
     for(unsigned int i=0;i<N_features;i++)
         loadInVec(dataLearnSplit[i],finalDataset[i],';');
 
-    ///On utilise la première ligne pour déterminer les noms des colonnes, on utilise les suivantes pour se faire une idée plus précise de la distribution des valeurs diverses que peuvent prendre les items d'une colonne
+    ///On utilise la premiï¿½re ligne pour dï¿½terminer les noms des colonnes, on utilise les suivantes pour se faire une idï¿½e plus prï¿½cise de la distribution des valeurs diverses que peuvent prendre les items d'une colonne
     std::map<std::string,unsigned int> columnNames;
     std::map<std::string,std::map<std::string,unsigned int> > counter;
     std::string tmp1,tmp2;
@@ -65,7 +110,7 @@ int autre()
         }
     }
 
-    ///On log le tout pour pouvoir analyser manuellement le résultat
+    ///On log le tout pour pouvoir analyser manuellement le rï¿½sultat
     std::ofstream ofs("log.txt",std::ios::out|std::ios::trunc);
     for(std::map<std::string,std::map<std::string,unsigned int> >::iterator it=counter.begin();it!=counter.end();it++)
     {
@@ -87,15 +132,15 @@ int autre()
         ofs<<"gives "<<sum<<std::endl<<std::endl;
     }
 
-    /**On utilise manuellement, pour chaque colonne, la fonction la plus adaptée pour la conversion string/float
+    /**On utilise manuellement, pour chaque colonne, la fonction la plus adaptï¿½e pour la conversion string/float
      On a le choix entre plusieurs fonctions :
-        1- La fonction de conversion string->float classique, adaptée pour les paramètres continus ou supposés l'être
-        2- La fonction de conversion string->float avec remplacement de valeur par espérance quand valeur "inconnue" (non renseignée)
-        3- La fonction de conversion date-mois-année(string)->float
-        4- La fonction d'écrasement basique : string->float avec float une classe aléatoire fixée pour chaque label
-        5- La fonction d'écrasement basée sur la distance de hamming : string->float avec une notion de proximité**/
+        1- La fonction de conversion string->float classique, adaptï¿½e pour les paramï¿½tres continus ou supposï¿½s l'ï¿½tre
+        2- La fonction de conversion string->float avec remplacement de valeur par espï¿½rance quand valeur "inconnue" (non renseignï¿½e)
+        3- La fonction de conversion date-mois-annï¿½e(string)->float
+        4- La fonction d'ï¿½crasement basique : string->float avec float une classe alï¿½atoire fixï¿½e pour chaque label
+        5- La fonction d'ï¿½crasement basï¿½e sur la distance de hamming : string->float avec une notion de proximitï¿½**/
 
-    /**Voici la liste des fonctions utilisées pour chaque catégorie :
+    /**Voici la liste des fonctions utilisï¿½es pour chaque catï¿½gorie :
         -APP_NB : 2]
         -APP_NB_PAYS : 2]
         -APP_NB_TYPE : 2]

@@ -16,43 +16,43 @@ template <typename T>
 class LoadAndSave
 {
     public:
-        ///chargement des données brutes (fichier train.csv, test.csv, ...)
+        ///chargement des donnï¿½es brutes (fichier train.csv, test.csv, ...)
         void loadRaw(const std::string& path, char separator = ';');
-        ///chargement uniquement des données déjà prétraitées (il est nécessaire de spécifier le nombre de colonnes)
+        ///chargement uniquement des donnï¿½es dï¿½jï¿½ prï¿½traitï¿½es (il est nï¿½cessaire de spï¿½cifier le nombre de colonnes)
         void loadFloat(const std::string& path, unsigned int numberColumns);
-        ///chargement uniquement des titres des colonnes (utile avec la méthode précédente qui importe uniquement les données)
+        ///chargement uniquement des titres des colonnes (utile avec la mï¿½thode prï¿½cï¿½dente qui importe uniquement les donnï¿½es)
         void loadTitles(const std::string& path);
 
-        ///sauvegarde toutes données brutes (prenant en compte les trous et les resize, pour générer de nouveaux jeux de données éventuellement troués)
+        ///sauvegarde toutes donnï¿½es brutes (prenant en compte les trous et les resize, pour gï¿½nï¿½rer de nouveaux jeux de donnï¿½es ï¿½ventuellement trouï¿½s)
         void saveRaw(const std::string& path);
-        ///sauvegarde toutes données traitées ou semi-traitées (prenant en compte les trous et resize)
+        ///sauvegarde toutes donnï¿½es traitï¿½es ou semi-traitï¿½es (prenant en compte les trous et resize)
         void saveFloat(const std::string& path);
-        ///sauvegarde les données brutes actuellement traitées (prenant en compte les trous et les resize, pour générer de nouveaux jeux de données éventuellement troués)
+        ///sauvegarde les donnï¿½es brutes actuellement traitï¿½es (prenant en compte les trous et les resize, pour gï¿½nï¿½rer de nouveaux jeux de donnï¿½es ï¿½ventuellement trouï¿½s)
         void saveCurrentRaw(const std::string& path);
-        ///sauvegarde les données traitées (prenant en compte les trous et resize)
+        ///sauvegarde les donnï¿½es traitï¿½es (prenant en compte les trous et resize)
         void saveCurrentFloat(const std::string& path);
-        ///sauvegarde des titres des colonnes actuellement traitées
+        ///sauvegarde des titres des colonnes actuellement traitï¿½es
         void saveTitles(const std::string& path);
 
-        ///crée des trous artificiels attendant d'être utilisés plus tard
+        ///crï¿½e des trous artificiels attendant d'ï¿½tre utilisï¿½s plus tard
         void createHoles(std::map<std::string,float>& probaHolesInColumn);
-        ///met à jour la map permettant de convertir les string en float selon des politiques définies en dehors de cette classe
+        ///met ï¿½ jour la map permettant de convertir les string en float selon des politiques dï¿½finies en dehors de cette classe
         void setConversionArray(const std::map<std::string,std::function<T(std::string)> >& howToConvert);
 
         ///choisit les colonnes sur lesquelles travailler
         void chooseColumns(const std::vector<std::string>& namesToKeep);
-        ///met à jour (avec trous et politiques) les données les données flottantes à partir des données string
+        ///met ï¿½ jour (avec trous et politiques) les donnï¿½es les donnï¿½es flottantes ï¿½ partir des donnï¿½es string
         void updateChosenColumns();
-        ///compte les singularités en leur assignant un label défini par l'utilisateur
+        ///compte les singularitï¿½s en leur assignant un label dï¿½fini par l'utilisateur
         const std::map<std::string,std::map<std::string,unsigned int> >& countAbnormal(std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols);
-        ///crée les histogrammes des données en prenant en compte ou non les données "anormales"
+        ///crï¿½e les histogrammes des donnï¿½es en prenant en compte ou non les donnï¿½es "anormales"
         void computeHistogramsOnChosenColumns(bool considerAbnormal = false);
-        ///remplace les données "anormales" par d'autres données en fonction d'une politique parmi 3 se basant sur la fréquence de ces anomalies
+        ///remplace les donnï¿½es "anormales" par d'autres donnï¿½es en fonction d'une politique parmi 3 se basant sur la frï¿½quence de ces anomalies
         void replaceAbnormalInFloat(std::map<std::string,std::map<std::string,BEHAVIOUR> >& behaviour);
 
-        ///écrit dans le fichier associé les histogrammes des colonnes actuellement traitées et les données anormales remarquées
+        ///ï¿½crit dans le fichier associï¿½ les histogrammes des colonnes actuellement traitï¿½es et les donnï¿½es anormales remarquï¿½es
         void saveDensity(const std::vector<std::string>& columns, const std::string& path);
-        ///convertit les données en données pour dlib
+        ///convertit les donnï¿½es en donnï¿½es pour dlib
         template <size_t N>
         void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels);
 
@@ -116,7 +116,7 @@ void LoadAndSave<T>::loadRaw(const std::string& path, char separator)
         }
     }
 
-    ///On utilise la première ligne pour déterminer les noms des colonnes, on utilise les suivantes pour se faire une idée plus précise de la distribution des valeurs diverses que peuvent prendre les items d'une colonne
+    ///On utilise la premiï¿½re ligne pour dï¿½terminer les noms des colonnes, on utilise les suivantes pour se faire une idï¿½e plus prï¿½cise de la distribution des valeurs diverses que peuvent prendre les items d'une colonne
     for(unsigned int i=0;i<N_parameters;i++)
     {
         columnNames.push_back(rawDataColumnsOrdered[i][0]);
@@ -400,15 +400,15 @@ void LoadAndSave<T>::replaceAbnormalInFloat(std::map<std::string,std::map<std::s
                     switch(behaviour[chosenColumns[i]][rawDataColumnsOrdered[col][j]])
                     {
                         case Other_class:
-                            //on cherche dans l'histogramme un endroit où on est sûr qu'il n'y a aucun antécédant (le paramètre est là pour différencier les valeurs pour des anormaux différents)
+                            //on cherche dans l'histogramme un endroit oï¿½ on est sï¿½r qu'il n'y a aucun antï¿½cï¿½dant (le paramï¿½tre est lï¿½ pour diffï¿½rencier les valeurs pour des anormaux diffï¿½rents)
                             correspondancesForAbnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]] = histograms[chosenColumns[i]].getOutValue(correspondancesForAbnormal[chosenColumns[i]].size());
                             break;
                         case Nearest_float:
-                            //on cherche dans l'histogramme l'antécédant le plus proche par rapport à la fréquence de l'anormal
+                            //on cherche dans l'histogramme l'antï¿½cï¿½dant le plus proche par rapport ï¿½ la frï¿½quence de l'anormal
                             correspondancesForAbnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]] = histograms[chosenColumns[i]].getNearest((float)abnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]]/(float)N_features);
                             break;
                         case Mean_float:
-                            //on cherche dans l'histogramme l'antécédant moyen par rapport à la fréquence de l'anormal
+                            //on cherche dans l'histogramme l'antï¿½cï¿½dant moyen par rapport ï¿½ la frï¿½quence de l'anormal
                             correspondancesForAbnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]] = histograms[chosenColumns[i]].getMean((float)abnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j]]/(float)N_features);
                             break;
                         default:
@@ -418,7 +418,7 @@ void LoadAndSave<T>::replaceAbnormalInFloat(std::map<std::string,std::map<std::s
             }
         }
     }
-    //on recalcule l'histogramme en prenant en compte les valeurs des anormaux modifiés
+    //on recalcule l'histogramme en prenant en compte les valeurs des anormaux modifiï¿½s
     computeHistogramsOnChosenColumns(true);
 }
 
