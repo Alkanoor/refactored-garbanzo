@@ -23,7 +23,7 @@
 1456430242 source:/home/alkanor/Bureau/Challenge_SD205/ExplosionOfChallenge/src/util.cpp
 	"../include/util.hpp"
 
-1458688409 source:c:\users\julien\documents\git\refactored-garbanzo\main.cpp
+1458747057 source:c:\users\julien\documents\git\refactored-garbanzo\main.cpp
 	<iostream>
 	<map>
 	"include/ThreadedOperations.hpp"
@@ -47,8 +47,9 @@
 1458687006 source:c:\users\julien\documents\git\refactored-garbanzo\src\util.cpp
 	"../include/util.hpp"
 
-1458689241 c:\users\julien\documents\git\refactored-garbanzo\include\loadandsave.hpp
+1458746990 c:\users\julien\documents\git\refactored-garbanzo\include\loadandsave.hpp
 	<dlib/svm.h>
+	<algorithm>
 	"Histogram.hpp"
 	"Interval.hpp"
 	"util.hpp"

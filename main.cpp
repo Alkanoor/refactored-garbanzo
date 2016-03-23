@@ -2,20 +2,23 @@
 #include <map>
 
 #include "include/ThreadedOperations.hpp"
+#include "include/ConversionFunction.hpp"
 #include "include/LoadAndSave.hpp"
 
 
 int main()
 {
-    std::vector<std::string> columns = {"VOIE_DEPOT","COUNTRY","SOURCE_BEGIN_MONTH","LANGUAGE_OF_FILLING","APP_NB_PAYS"};
+    srand(time(NULL));
+
+    std::vector<std::string> columns = {"SOURCE_BEGIN_MONTH","VOIE_DEPOT","LANGUAGE_OF_FILLING","COUNTRY","APP_NB_PAYS"};
 
     LoadAndSave<float> wrapper;
 
     wrapper.loadRaw("../trainLittle.csv");
     wrapper.chooseColumns(columns);
-    wrapper.saveRaw("raw.txt");
-    wrapper.saveCurrentRaw("currentRaw.txt");
-    wrapper.saveTitles("titles.txt");
+    wrapper.saveRaw("log1_identity/raw.txt");
+    wrapper.saveCurrentRaw("log1_identity/currentRaw.txt");
+    wrapper.saveTitles("log1_identity/titles.txt");
 
     std::map<std::string,float> probaHolesInColumn;
     probaHolesInColumn["VOIE_DEPOT"] = 0.1;
@@ -24,40 +27,62 @@ int main()
     probaHolesInColumn["LANGUAGE_OF_FILLING"] = 0.3;
     probaHolesInColumn["APP_NB_PAYSerror"] = 0.2;
 
-    std::map<std::string,std::function<float(std::string)> >conversionMap;
 
     wrapper.createHoles(probaHolesInColumn);
-    wrapper.setConversionArray(const std::map<std::string,std::function<T(std::string)> >& howToConvert);
+    wrapper.saveRaw("log2_with_holes/raw.txt");
+    wrapper.saveCurrentRaw("log2_with_holes/currentRaw.txt");
+    wrapper.saveTitles("log2_with_holes/titles.txt");
 
-    ///choisit les colonnes sur lesquelles travailler
-    void chooseColumns(const std::vector<std::string>& namesToKeep);
-    ///met � jour (avec trous et politiques) les donn�es les donn�es flottantes � partir des donn�es string
-    void updateChosenColumns();
-    ///compte les singularit�s en leur assignant un label d�fini par l'utilisateur
-    const std::map<std::string,std::map<std::string,unsigned int> >& countAbnormal(std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols);
-    ///cr�e les histogrammes des donn�es en prenant en compte ou non les donn�es "anormales"
+
+    probaHolesInColumn["APP_NB_PAYS"] = 0.2;
+
+    wrapper.randomShuffle();
+    wrapper.createHoles(probaHolesInColumn);
+    wrapper.saveRaw("log3_with_holes/raw.txt");
+    wrapper.saveCurrentRaw("log3_with_holes/currentRaw.txt");
+    wrapper.saveTitles("log3_with_holes/titles.txt");
+
+    std::set<std::string> unsetElements;
+    unsetElements.insert("");
+    unsetElements.insert("(MISSING)");
+
+    std::map<std::string,ConversionFunction<float> > conversionObjects;
+    std::map<std::string,std::function<float(std::string)> > conversionMap;
+
+    conversionObjects["VOIE_DEPOT"] = ConversionFunction<float>(3);
+    conversionObjects["COUNTRY"] = ConversionFunction<float>(3);
+    conversionObjects["SOURCE_BEGIN_MONTH"] = ConversionFunction<float>(2);
+    conversionObjects["LANGUAGE_OF_FILLING"] = ConversionFunction<float>(3);
+    conversionObjects["APP_NB_PAYS"] = ConversionFunction<float>(1);
+
+    for(auto it=conversionObjects.begin(); it!=conversionObjects.end(); it++)
+    {
+        it->second.setUnknown(unsetElements);
+        conversionMap[it->first] = it->second.conversionFunction();
+    }
+
+    wrapper.setConversionArray(conversionMap);
+    wrapper.updateChosenColumns();
+
+    wrapper.saveRaw("log4_with_all/raw.txt");
+    wrapper.saveFloat("log4_with_all/converted.txt");
+    wrapper.saveCurrentRaw("log4_with_all/currentRaw.txt");
+    wrapper.saveCurrentFloat("log4_with_all/currentConverted.txt");
+    wrapper.saveTitles("log4_with_all/titles.txt");
+
+
+    /*const std::map<std::string,std::map<std::string,unsigned int> >& countAbnormal(std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols);
     void computeHistogramsOnChosenColumns(bool considerAbnormal = false);
-    ///remplace les donn�es "anormales" par d'autres donn�es en fonction d'une politique parmi 3 se basant sur la fr�quence de ces anomalies
     void replaceAbnormalInFloat(std::map<std::string,std::map<std::string,BEHAVIOUR> >& behaviour);
 
-    ///�crit dans le fichier associ� les histogrammes des colonnes actuellement trait�es et les donn�es anormales remarqu�es
     void saveDensity(const std::vector<std::string>& columns, const std::string& path);
-    ///convertit les donn�es en donn�es pour dlib
+
     template <size_t N>
-    void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels);
+    void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels);*/
 
-    unsigned int getNumberRows() const;
-    unsigned int getNumberColumnsRaw() const;
-    unsigned int getCurrentNumberColumns() const;
 
-    wrapper.saveRaw("raw.txt");
-    wrapper.saveFloat("converted1.txt");
-    wrapper.saveCurrentRaw("currentRaw1.txt");
-    wrapper.saveCurrentFloat("converted1.txt");
-    wrapper.saveTitles("titles1.txt");
-
-    wrapper.loadTitles("titles1.txt");
-    wrapper.loadFloat("converted1.txt", wrapper.getNumberColumnsRaw());
+    /*wrapper.loadTitles("titles.txt");
+    wrapper.loadFloat("currentConverted.txt", wrapper.getNumberColumnsRaw());*/
 
     return 0;
 }
