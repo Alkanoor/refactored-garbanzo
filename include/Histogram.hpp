@@ -16,18 +16,22 @@ class Histogram
 
         void clear();
         void set(const Interval<T>& interval, float cumulatedFreq);
+        void set(const Interval<T>& interval, float cumulatedFreq, const std::set<std::string>& labels);
 
         T getOutValue(unsigned int index);
         T getNearest(float freq);
         T getMean(float freq);
 
+        void setLastLabels(const std::set<std::string>& labels);
+
         template <typename U>
         friend std::ostream& operator << (std::ostream& cur, const Histogram<U>& h);
 
     private:
-        std::map<Interval<T>,float> intervals;
+        std::map<Interval<T>,std::pair<float,std::set<std::string> > > intervals;
         T min, max;
         bool minSet, maxSet;
+        std::set<std::string> lastLabels;
 
         static int width, height;
 };
@@ -74,7 +78,14 @@ void Histogram<T>::set(const Interval<T>& interval, float cumulatedFreq)
         max = interval.right();
         maxSet = true;
     }
-    intervals[interval] = cumulatedFreq;
+    intervals[interval].first = cumulatedFreq;
+}
+
+template <typename T>
+void Histogram<T>::set(const Interval<T>& interval, float cumulatedFreq, const std::set<std::string>& labels)
+{
+    set(interval,cumulatedFreq);
+    intervals[interval].second = labels;
 }
 
 
@@ -84,9 +95,9 @@ T Histogram<T>::getOutValue(unsigned int index)
     if(intervals.size()>1)
     {
         auto it = intervals.begin();
-        T t1 = (it->first)();
+        T t1 = it->first.val();
         it++;
-        T t2 = (it->first)();
+        T t2 = it->first.val();
         return t1-(index+1)*(t2-t1);
     }
     else
@@ -97,14 +108,14 @@ template <typename T>
 T Histogram<T>::getNearest(float freq)
 {
     auto it = intervals.begin();
-    if(it->second>freq)
-        return (it->first)();
-    T cur = (it->first)();
-    while(it!=intervals.end()&&freq>it->second)
+    if(it->second.first>freq)
+        return it->first.val();
+    T cur = it->first.val();
+    while(it!=intervals.end()&&freq>it->second.first)
     {
         it++;
-        if(it!=intervals.end()&&freq>it->second)
-            cur = (it->first)();
+        if(it!=intervals.end()&&freq>it->second.first)
+            cur = it->first.val();
     }
     return cur;
 }
@@ -113,22 +124,22 @@ template <typename T>
 T Histogram<T>::getMean(float freq)
 {
     auto it = intervals.begin();
-    if(it->second>freq)
-        return (it->first)();
-    T cur = (it->first)();
+    if(it->second.first>freq)
+        return it->first.val();
+    T cur = it->first.val();
     T next = cur;
-    float curFreq = it->second, nextFreq = it->second;
-    while(it!=intervals.end()&&freq>it->second)
+    float curFreq = it->second.first, nextFreq = it->second.first;
+    while(it!=intervals.end()&&freq>it->second.first)
     {
         it++;
         if(it!=intervals.end())
         {
-            nextFreq = it->second;
-            next = (it->first)();
-            if(freq>it->second)
+            nextFreq = it->second.first;
+            next = it->first.val();
+            if(freq>it->second.first)
             {
-                curFreq = it->second;
-                cur = (it->first)();
+                curFreq = it->second.first;
+                cur = it->first.val();
             }
         }
     }
@@ -139,6 +150,10 @@ T Histogram<T>::getMean(float freq)
 }
 
 template <typename T>
+void Histogram<T>::setLastLabels(const std::set<std::string>& labels)
+{lastLabels = labels;}
+
+template <typename T>
 std::ostream& operator << (std::ostream& cur, const Histogram<T>& h)
 {
     unsigned int c = 0;
@@ -146,19 +161,19 @@ std::ostream& operator << (std::ostream& cur, const Histogram<T>& h)
     for(; it!=h.intervals.end() && c+1<h.intervals.size(); )
     {
         cur<<"[ "<<it->first.left()<<" ; ";
-        float saved = it->second;
+        float saved = it->second.first;
         it++;
         cur<<it->first.left()<<" ] :";
         cur<<saved<<" with labels ";
-        for(unsigned int i=0;i<it->first.getLabels().size();i++)
-            cur<<it->first.getLabels()[i]<<" ";
+        for(auto it2=it->second.second.begin(); it2!=it->second.second.end(); it2++)
+            cur<<(*it2)<<" ";
         cur<<std::endl;
         c++;
     }
     cur<<"[ "<<it->first.left()<<" ; +inf ] :";
-    cur<<it->second<<" with labels ";
-    for(unsigned int i=0;i<it->first.getLabels().size();i++)
-        cur<<it->first.getLabels()[i]<<" ";
+    cur<<it->second.first<<" with labels ";
+    for(auto it2=h.lastLabels.begin(); it2!=h.lastLabels.end(); it2++)
+        cur<<(*it2)<<" ";
     cur<<std::endl;
     cur<<std::endl;
     return cur;

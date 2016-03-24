@@ -23,10 +23,11 @@
 1456430242 source:/home/alkanor/Bureau/Challenge_SD205/ExplosionOfChallenge/src/util.cpp
 	"../include/util.hpp"
 
-1458747057 source:c:\users\julien\documents\git\refactored-garbanzo\main.cpp
+1458777944 source:c:\users\julien\documents\git\refactored-garbanzo\main.cpp
 	<iostream>
 	<map>
 	"include/ThreadedOperations.hpp"
+	"include/ConversionFunction.hpp"
 	"include/LoadAndSave.hpp"
 
 1456488620 c:\users\julien\documents\git\refactored-garbanzo\include\threadedoperations.hpp
@@ -47,18 +48,24 @@
 1458687006 source:c:\users\julien\documents\git\refactored-garbanzo\src\util.cpp
 	"../include/util.hpp"
 
-1458746990 c:\users\julien\documents\git\refactored-garbanzo\include\loadandsave.hpp
+1458777749 c:\users\julien\documents\git\refactored-garbanzo\include\loadandsave.hpp
 	<dlib/svm.h>
 	<algorithm>
 	"Histogram.hpp"
 	"Interval.hpp"
 	"util.hpp"
 
-1458687116 c:\users\julien\documents\git\refactored-garbanzo\include\histogram.hpp
+1458775287 c:\users\julien\documents\git\refactored-garbanzo\include\histogram.hpp
 	<ostream>
 	<cmath>
 	"Interval.hpp"
 
-1458421015 c:\users\julien\documents\git\refactored-garbanzo\include\interval.hpp
+1458774374 c:\users\julien\documents\git\refactored-garbanzo\include\interval.hpp
+	<set>
+
+1458751322 c:\users\julien\documents\git\refactored-garbanzo\include\conversionfunction.hpp
+	<functional>
+	<sstream>
+	<string>
 	<set>
 

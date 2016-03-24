@@ -47,7 +47,7 @@ class LoadAndSave
         ///met � jour (avec trous et politiques) les donn�es les donn�es flottantes � partir des donn�es string
         void updateChosenColumns();
         ///compte les singularit�s en leur assignant un label d�fini par l'utilisateur
-        const std::map<std::string,std::map<std::string,unsigned int> >& countAbnormal(std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols);
+        const std::map<std::string,std::map<std::string,unsigned int> >& countAbnormal(std::map<std::string, std::set<std::string> >& labelsOfAbnormalForCols);
         ///cr�e les histogrammes des donn�es en prenant en compte ou non les donn�es "anormales"
         void computeHistogramsOnChosenColumns(bool considerAbnormal = false);
         ///remplace les donn�es "anormales" par d'autres donn�es en fonction d'une politique parmi 3 se basant sur la fr�quence de ces anomalies
@@ -144,6 +144,11 @@ void LoadAndSave<T>::loadFloat(const std::string& path, unsigned int numberColum
         std::cout<<"Error loading floating data"<<std::endl;
         exit(-1);
     }
+    for(unsigned int k=0;k<numberColumns;k++)
+    {
+        transformedDataColumnsOrdered[k].push_back(0);
+        noHoleColumnsOrdered[k].push_back(true);
+    }
     unsigned int i=0, j=0;
     while(ifs>>tmp)
     {
@@ -211,7 +216,7 @@ void LoadAndSave<T>::saveFloat(const std::string& path)
     for(unsigned int i=0;i<N_features;i++)
     {
         for(unsigned int j=0;j<N_parameters;j++)
-            if(noHoleColumnsOrdered[j][i])
+            if(noHoleColumnsOrdered[j][i]||correspondancesForAbnormal[columnNames[j]].count(""))
             {
                 if(j<N_parameters-1)
                     ofs<<transformedDataColumnsOrdered[j][i]<<" ";
@@ -220,7 +225,9 @@ void LoadAndSave<T>::saveFloat(const std::string& path)
             }
             else
                 if(j<N_parameters-1)
-                    ofs<<" -999999999 ";
+                    ofs<<"-999999999 ";
+                else
+                    ofs<<"-999999999";
         ofs<<std::endl;
     }
     ofs.close();
@@ -265,7 +272,7 @@ void LoadAndSave<T>::saveCurrentFloat(const std::string& path)
     for(unsigned int i=0;i<N_features;i++)
     {
         for(unsigned int j=0;j<chosenColumns.size();j++)
-            if(noHoleColumnsOrdered[index[j]][i])
+            if(noHoleColumnsOrdered[index[j]][i]||correspondancesForAbnormal[chosenColumns[j]].count(""))
             {
                 if(j<index.size()-1)
                     ofs<<transformedDataColumnsOrdered[index[j]][i]<<" ";
@@ -274,7 +281,9 @@ void LoadAndSave<T>::saveCurrentFloat(const std::string& path)
             }
             else
                 if(j<index.size()-1)
-                    ofs<<" -999999999 ";
+                    ofs<<"-999999999 ";
+                else
+                    ofs<<"-999999999";
         ofs<<std::endl;
     }
     ofs.close();
@@ -355,20 +364,31 @@ void LoadAndSave<T>::updateChosenColumns()
 }
 
 template <typename T>
-const std::map<std::string,std::map<std::string,unsigned int> >& LoadAndSave<T>::countAbnormal(std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols)
+const std::map<std::string,std::map<std::string,unsigned int> >& LoadAndSave<T>::countAbnormal(std::map<std::string, std::set<std::string> >& labelsOfAbnormalForCols)
 {
     abnormal.clear();
     for(auto it=labelsOfAbnormalForCols.begin(); it!=labelsOfAbnormalForCols.end(); it++)
     {
         unsigned int col = columnNamesCorrespondances[it->first];
         for(unsigned int i=0;i<N_features;i++)
-            if(it->second.count(rawDataColumnsOrdered[col][i+1]))
+            if(!noHoleColumnsOrdered[col][i])
             {
-                if(abnormal[it->first].count(it->second[rawDataColumnsOrdered[col][i+1]]))
-                    abnormal[it->first][it->second[rawDataColumnsOrdered[col][i+1]]]++;
-                else
-                    abnormal[it->first][it->second[rawDataColumnsOrdered[col][i+1]]] = 1;
+                if(it->second.count(""))
+                {
+                    if(abnormal[it->first].count(""))
+                        abnormal[it->first][""]++;
+                    else
+                        abnormal[it->first][""] = 1;
+                }
             }
+            else
+                if(it->second.count(rawDataColumnsOrdered[col][i+1]))
+                {
+                    if(abnormal[it->first].count(rawDataColumnsOrdered[col][i+1]))
+                        abnormal[it->first][rawDataColumnsOrdered[col][i+1]]++;
+                    else
+                        abnormal[it->first][rawDataColumnsOrdered[col][i+1]] = 1;
+                }
     }
     return abnormal;
 }
@@ -378,32 +398,42 @@ void LoadAndSave<T>::computeHistogramsOnChosenColumns(bool considerAbnormal)
 {
     histograms.clear();
     counter.clear();
+    std::map<std::string,std::map<Interval<T>, std::set<std::string> > > labels;
     for(unsigned int i=0;i<chosenColumns.size();i++)
     {
         unsigned int col = columnNamesCorrespondances[chosenColumns[i]];
         unsigned int N = 0;
         for(unsigned int j=0;j<N_features;j++)
-            if(considerAbnormal||(!considerAbnormal&&!abnormal[chosenColumns[i]].count(rawDataColumnsOrdered[col][j+1])))
+            if(considerAbnormal||(!considerAbnormal&&!abnormal[chosenColumns[i]].count(rawDataColumnsOrdered[col][j+1])&&noHoleColumnsOrdered[col][j]))
             {
-                auto interval = Interval<T>(transformedDataColumnsOrdered[col][j],rawDataColumnsOrdered[col][j+1]);
+                Interval<T> interval = transformedDataColumnsOrdered[col][j];
                 if(counter[chosenColumns[i]].count(interval))
                     counter[chosenColumns[i]][interval]++;
                 else
                     counter[chosenColumns[i]][interval] = 1;
+                if(!noHoleColumnsOrdered[col][j])
+                    labels[chosenColumns[i]][interval].insert("(empty)");
+                else
+                    labels[chosenColumns[i]][interval].insert(rawDataColumnsOrdered[col][j+1]);
                 N++;
             }
         float cur=0;
+        std::set<std::string> prev;
         Interval<T> curInterval("-inf",0);
-        for(auto it=counter[chosenColumns[i]].begin(); it!=counter[chosenColumns[i]].end(); it++)
+        for(auto it=counter[chosenColumns[i]].begin(), it2=labels[chosenColumns[i]].begin(); it!=counter[chosenColumns[i]].end(); it++,it2++)
         {
-            curInterval.setRight(it->first.left());
-            histograms.set(curInterval,cur);
+            if(!curInterval.leftInfinite())
+            {
+                curInterval.setRight(it->first.left());
+                histograms[chosenColumns[i]].set(curInterval,cur);
+            }
             cur += (float)it->second/(float)N;
-            curInterval.setLabel(it->first.label());
-            curInterval.setLeft(it->first.left());
+            curInterval.setValue(it->first.left());
             curInterval.setRight(it->first.right());
-            histograms.set(curInterval,cur);
+            histograms[chosenColumns[i]].set(curInterval,cur,prev);
+            prev = it2->second;
         }
+        histograms[chosenColumns[i]].setLastLabels(prev);
     }
 }
 
@@ -417,12 +447,12 @@ void LoadAndSave<T>::replaceAbnormalInFloat(std::map<std::string,std::map<std::s
     {
         unsigned int col = columnNamesCorrespondances[chosenColumns[i]];
         for(unsigned int j=0;j<N_features;j++)
-        {
             if(abnormal[chosenColumns[i]].count(rawDataColumnsOrdered[col][j+1]))
             {
                 if(correspondancesForAbnormal[chosenColumns[i]].count(rawDataColumnsOrdered[col][j+1]))
                     transformedDataColumnsOrdered[col][j] = correspondancesForAbnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j+1]];
                 else
+                {
                     switch(behaviour[chosenColumns[i]][rawDataColumnsOrdered[col][j+1]])
                     {
                         case Other_class:
@@ -441,8 +471,36 @@ void LoadAndSave<T>::replaceAbnormalInFloat(std::map<std::string,std::map<std::s
                             std::cout<<"Be careful please, try to provide correct behaviours for every abnormal situation"<<std::endl;
                             break;
                     }
+                    transformedDataColumnsOrdered[col][j] = correspondancesForAbnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j+1]];
+                }
             }
-        }
+            else if(!noHoleColumnsOrdered[col][j]&&abnormal[chosenColumns[i]].count(""))
+            {
+                if(correspondancesForAbnormal[chosenColumns[i]].count(""))
+                    transformedDataColumnsOrdered[col][j] = correspondancesForAbnormal[chosenColumns[i]][""];
+                else
+                {
+                    switch(behaviour[chosenColumns[i]][""])
+                    {
+                        case Other_class:
+                            //on cherche dans l'histogramme un endroit o� on est s�r qu'il n'y a aucun ant�c�dant (le param�tre est l� pour diff�rencier les valeurs pour des anormaux diff�rents)
+                            correspondancesForAbnormal[chosenColumns[i]][""] = histograms[chosenColumns[i]].getOutValue(correspondancesForAbnormal[chosenColumns[i]].size());
+                            break;
+                        case Nearest_float:
+                            //on cherche dans l'histogramme l'ant�c�dant le plus proche par rapport � la fr�quence de l'anormal
+                            correspondancesForAbnormal[chosenColumns[i]][""] = histograms[chosenColumns[i]].getNearest((float)abnormal[chosenColumns[i]][""]/(float)N_features);
+                            break;
+                        case Mean_float:
+                            //on cherche dans l'histogramme l'ant�c�dant moyen par rapport � la fr�quence de l'anormal
+                            correspondancesForAbnormal[chosenColumns[i]][""] = histograms[chosenColumns[i]].getMean((float)abnormal[chosenColumns[i]][""]/(float)N_features);
+                            break;
+                        default:
+                            std::cout<<"Be careful please, try to provide correct behaviours for every abnormal situation"<<std::endl;
+                            break;
+                    }
+                    transformedDataColumnsOrdered[col][j] = correspondancesForAbnormal[chosenColumns[i]][""];
+                }
+            }
     }
     //on recalcule l'histogramme en prenant en compte les valeurs des anormaux modifi�s
     computeHistogramsOnChosenColumns(true);
@@ -454,19 +512,17 @@ void LoadAndSave<T>::saveDensity(const std::vector<std::string>& columns, const 
     std::ofstream ofs(path.c_str(),std::ios::out);
     for(unsigned int i=0;i<columns.size();i++)
     {
-        unsigned int col = columnNamesCorrespondances[columns[i]];
         if(!histograms.count(columns[i]))
             ofs<<"Histogram for column "<<columns[i]<<" has not been created"<<std::endl<<std::endl;
         else
         {
-            ofs<<"============================"<<std::endl;
-            ofs<<"====Histogram of "<<columns[i]<<"===="<<std::endl;
-            ofs<<"============================"<<std::endl;
+            ofs<<"===================================================================================="<<std::endl;
+            ofs<<"============================Histogram of "<<columns[i]<<"============================"<<std::endl;
+            ofs<<"===================================================================================="<<std::endl;
             for(auto it=correspondancesForAbnormal[columns[i]].begin(); it!=correspondancesForAbnormal[columns[i]].end(); it++)
-                ofs<<"Correspondance for abnormal "<<it->first<<" => "<<it->second<<std::endl;
+                ofs<<"Correspondance for abnormal |"<<it->first<<"| => "<<it->second<<std::endl;
             ofs<<std::endl;
-            for(auto it=histograms[columns[i]].begin(); it!=histograms[columns[i]].end(); it++)
-                ofs<<(*it);
+            ofs<<histograms[columns[i]];
             ofs<<"============================"<<std::endl<<std::endl;;
         }
     }
@@ -488,11 +544,13 @@ void LoadAndSave<T>::convertToDlibMatrix(const std::array<std::string,N>& column
     for(unsigned int j=0;j<N_features;j++)
     {
         for(unsigned int i=0;i<N;i++)
-            tmp[i] = transformedDataColumnsOrdered[corresp[i]][j];
+            tmp(i) = transformedDataColumnsOrdered[corresp[i]][j];
         samples[j] = tmp;
-        labels[j] = transformedDataColumnsOrdered[targetColumn][j];
+        if(transformedDataColumnsOrdered[targetColumn][j]>1)
+            labels[j] = -1;
+        else
+            labels[j] = transformedDataColumnsOrdered[targetColumn][j];
     }
-    return samples;
 }
 
 template <typename T>

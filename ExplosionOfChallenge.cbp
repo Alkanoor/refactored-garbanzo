@@ -32,6 +32,7 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="include\ConversionFunction.hpp" />
 		<Unit filename="include\Histogram.hpp" />
 		<Unit filename="include\Interval.hpp" />
 		<Unit filename="include\LoadAndSave.hpp" />

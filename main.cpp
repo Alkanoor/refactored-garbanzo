@@ -10,7 +10,8 @@ int main()
 {
     srand(time(NULL));
 
-    std::vector<std::string> columns = {"SOURCE_BEGIN_MONTH","VOIE_DEPOT","LANGUAGE_OF_FILLING","COUNTRY","APP_NB_PAYS"};
+    /*std::vector<std::string> columns = {"SOURCE_BEGIN_MONTH","VOIE_DEPOT","LANGUAGE_OF_FILLING","COUNTRY","FISRT_APP_TYPE","APP_NB_PAYS"};
+    columns = {"FISRT_APP_TYPE"};
 
     LoadAndSave<float> wrapper;
 
@@ -21,11 +22,12 @@ int main()
     wrapper.saveTitles("log1_identity/titles.txt");
 
     std::map<std::string,float> probaHolesInColumn;
-    probaHolesInColumn["VOIE_DEPOT"] = 0.1;
+    probaHolesInColumn["VOIE_DEPOT"] = 0.05;
     probaHolesInColumn["COUNTRY"] = 0.05;
-    probaHolesInColumn["SOURCE_BEGIN_MONTH"] = 0.8;
-    probaHolesInColumn["LANGUAGE_OF_FILLING"] = 0.3;
-    probaHolesInColumn["APP_NB_PAYSerror"] = 0.2;
+    probaHolesInColumn["SOURCE_BEGIN_MONTH"] = 0.05;
+    probaHolesInColumn["LANGUAGE_OF_FILLING"] = 0.05;
+    probaHolesInColumn["FISRT_APP_TYPE"] = 0.05;
+    probaHolesInColumn["APP_NB_PAYSerror"] = 0.05;
 
 
     wrapper.createHoles(probaHolesInColumn);
@@ -34,7 +36,7 @@ int main()
     wrapper.saveTitles("log2_with_holes/titles.txt");
 
 
-    probaHolesInColumn["APP_NB_PAYS"] = 0.2;
+    probaHolesInColumn["APP_NB_PAYS"] = 0.05;
 
     wrapper.randomShuffle();
     wrapper.createHoles(probaHolesInColumn);
@@ -51,8 +53,9 @@ int main()
 
     conversionObjects["VOIE_DEPOT"] = ConversionFunction<float>(3);
     conversionObjects["COUNTRY"] = ConversionFunction<float>(3);
-    conversionObjects["SOURCE_BEGIN_MONTH"] = ConversionFunction<float>(2);
+    conversionObjects["SOURCE_BEGIN_MONTH"] = ConversionFunction<float>(3);
     conversionObjects["LANGUAGE_OF_FILLING"] = ConversionFunction<float>(3);
+    conversionObjects["FISRT_APP_TYPE"] = ConversionFunction<float>(3);
     conversionObjects["APP_NB_PAYS"] = ConversionFunction<float>(1);
 
     for(auto it=conversionObjects.begin(); it!=conversionObjects.end(); it++)
@@ -70,14 +73,135 @@ int main()
     wrapper.saveCurrentFloat("log4_with_all/currentConverted.txt");
     wrapper.saveTitles("log4_with_all/titles.txt");
 
+    std::map<std::string, std::set<std::string> > labelsOfAbnormalForCols;
+    for(unsigned int i=0;i<columns.size();i++)
+        labelsOfAbnormalForCols[columns[i]] = unsetElements;
 
-    /*const std::map<std::string,std::map<std::string,unsigned int> >& countAbnormal(std::map<std::string, std::map<std::string, std::string> >& labelsOfAbnormalForCols);
-    void computeHistogramsOnChosenColumns(bool considerAbnormal = false);
-    void replaceAbnormalInFloat(std::map<std::string,std::map<std::string,BEHAVIOUR> >& behaviour);
+    std::map<std::string,std::map<std::string,unsigned int> > abnormals = wrapper.countAbnormal(labelsOfAbnormalForCols);
 
-    void saveDensity(const std::vector<std::string>& columns, const std::string& path);
+    for(auto it=abnormals.begin(); it!=abnormals.end(); it++)
+        std::cout<<it->first<<" => "<<it->second[""]<<" empty and "<<it->second["(MISSING)"]<<" missing"<<std::endl;
 
-    template <size_t N>
+
+    std::map<std::string,BEHAVIOUR> defaultBehaviour;
+    defaultBehaviour[""] = Other_class;
+    defaultBehaviour["(MISSING)"] = Other_class;
+
+    std::map<std::string,std::map<std::string,BEHAVIOUR> > behaviours;
+    for(auto it=conversionObjects.begin(); it!=conversionObjects.end(); it++)
+        behaviours[it->first] = defaultBehaviour;
+
+    behaviours["APP_NB_PAYS"][""] = Mean_float;
+    behaviours["APP_NB_PAYS"]["(MISSING)"] = Mean_float;
+
+    wrapper.replaceAbnormalInFloat(behaviours);
+    wrapper.saveDensity(columns, "densities.txt");
+    wrapper.saveCurrentFloat("floatFinal.txt");*/
+
+
+
+    std::vector<std::string> columns = {"IDX_RADIC","VARIABLE_CIBLE"};
+
+    LoadAndSave<float> wrapper;
+
+    wrapper.loadFloat("serious/currentConverted.txt",2);
+    wrapper.loadTitles("serious/titles.txt");
+    wrapper.chooseColumns(columns);
+
+    /*wrapper.loadRaw("../train.csv");
+    wrapper.chooseColumns(columns);
+    wrapper.saveCurrentRaw("serious/currentRaw.txt");
+    wrapper.saveTitles("serious/titles.txt");
+
+    std::set<std::string> unsetElements;
+    unsetElements.insert("");
+    unsetElements.insert("(MISSING)");
+
+    std::map<std::string,ConversionFunction<float> > conversionObjects;
+    std::map<std::string,std::function<float(std::string)> > conversionMap;
+
+    conversionObjects["IDX_RADIC"] = ConversionFunction<float>(1);
+    conversionObjects["VARIABLE_CIBLE"] = ConversionFunction<float>(3);
+
+    for(auto it=conversionObjects.begin(); it!=conversionObjects.end(); it++)
+    {
+        it->second.setUnknown(unsetElements);
+        conversionMap[it->first] = it->second.conversionFunction();
+    }
+
+    wrapper.setConversionArray(conversionMap);
+    wrapper.updateChosenColumns();
+
+    wrapper.saveCurrentFloat("serious/currentConverted.txt");*/
+
+    std::array<std::string,1> cols = {"IDX_RADIC"};
+    std::vector<dlib::matrix<float,1,1> > samples;
+    std::vector<float> labels;
+    wrapper.convertToDlibMatrix<1>(cols,"VARIABLE_CIBLE",samples,labels);
+
+    typedef dlib::matrix<float, 1, 1> sample_type;
+    typedef dlib::radial_basis_kernel<sample_type> kernel_type;
+
+    using namespace dlib;
+    using namespace std;
+
+     // Here we normalize all the samples by subtracting their mean and dividing by their
+    // standard deviation.  This is generally a good idea since it often heads off
+    // numerical stability problems and also prevents one large feature from smothering
+    // others.  Doing this doesn't matter much in this example so I'm just doing this here
+    // so you can see an easy way to accomplish this with the library.
+    vector_normalizer<sample_type> normalizer;
+    // let the normalizer learn the mean and standard deviation of the samples
+    normalizer.train(samples);
+    // now normalize each sample
+    for (unsigned long i = 0; i < samples.size(); ++i)
+        samples[i] = normalizer(samples[i]);
+
+
+    // Now that we have some data we want to train on it.  However, there are two
+    // parameters to the training.  These are the nu and gamma parameters.  Our choice for
+    // these parameters will influence how good the resulting decision function is.  To
+    // test how good a particular choice of these parameters is we can use the
+    // cross_validate_trainer() function to perform n-fold cross validation on our training
+    // data.  However, there is a problem with the way we have sampled our distribution
+    // above.  The problem is that there is a definite ordering to the samples.  That is,
+    // the first half of the samples look like they are from a different distribution than
+    // the second half.  This would screw up the cross validation process but we can fix it
+    // by randomizing the order of the samples with the following function call.
+    randomize_samples(samples, labels);
+
+
+    // The nu parameter has a maximum value that is dependent on the ratio of the +1 to -1
+    // labels in the training data.  This function finds that value.
+    const double max_nu = maximum_nu(labels);
+
+    // here we make an instance of the svm_nu_trainer object that uses our kernel type.
+    svm_nu_trainer<kernel_type> trainer;
+
+    // Now we loop over some different nu and gamma values to see how good they are.  Note
+    // that this is a very simple way to try out a few possible parameter choices.  You
+    // should look at the model_selection_ex.cpp program for examples of more sophisticated
+    // strategies for determining good parameter choices.
+    cout << "doing cross validation" << endl;
+    for (double gamma = 0.00001; gamma <= 1; gamma *= 5)
+    {
+        for (double nu = 0.00001; nu < max_nu; nu *= 5)
+        {
+            // tell the trainer the parameters we want to use
+            trainer.set_kernel(kernel_type(gamma));
+            trainer.set_nu(nu);
+
+            cout << "gamma: " << gamma << "    nu: " << nu;
+            // Print out the cross validation accuracy for 3-fold cross validation using
+            // the current gamma and nu.  cross_validate_trainer() returns a row vector.
+            // The first element of the vector is the fraction of +1 training examples
+            // correctly classified and the second number is the fraction of -1 training
+            // examples correctly classified.
+            cout << "     cross validation accuracy: " << cross_validate_trainer(trainer, samples, labels, 3);
+        }
+    }
+
+    /*template <size_t N>
     void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels);*/
 
 

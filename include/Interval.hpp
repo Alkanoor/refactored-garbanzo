@@ -9,24 +9,23 @@ template <typename T>
 class Interval
 {
     public:
-        Interval(T val);
+        Interval(T val=50);
         Interval(const std::string& begin_, T end_);
         Interval(T begin_, const std::string& end_);
 
         bool operator == (const Interval<T>& other) const;
         bool operator <= (const Interval<T>& other) const;
         bool operator < (const Interval<T>& other) const;
-        T operator() () const;
 
+        void setValue(T val);
         void setLeft(T val);
         void setRight(T val);
-        void setLabel(const std::string& label);
 
         bool leftInfinite() const;
         bool rightInfinite() const;
+        T val() const;
         T left() const;
         T right() const;
-        const std::set<std::string>& getLabels() const;
 
         static void setPrecision(int precision);
 
@@ -35,8 +34,6 @@ class Interval
         T value;
         int begin, end;
         bool beginInfinite, endInfinite;
-
-        std::set<std::string> labels;
 };
 
 template <typename T>
@@ -101,9 +98,11 @@ bool Interval<T>::operator < (const Interval<T>& other) const
 }
 
 template <typename T>
-T Interval<T>::operator() () const
+void Interval<T>::setValue(T val)
 {
-    return value;
+    value = val;
+    begin = (int)(val*precisionBetween0And1);
+    end = begin+1;
 }
 
 template <typename T>
@@ -115,10 +114,6 @@ void Interval<T>::setRight(T val)
 {end = (int)(val*precisionBetween0And1)+1;}
 
 template <typename T>
-void Interval<T>::setLabel(const std::string& label)
-{labels.insert(label);}
-
-template <typename T>
 bool Interval<T>::leftInfinite() const
 {return beginInfinite;}
 
@@ -127,16 +122,16 @@ bool Interval<T>::rightInfinite() const
 {return endInfinite;}
 
 template <typename T>
+T Interval<T>::val() const
+{return value;}
+
+template <typename T>
 T Interval<T>::left() const
 {return (T)begin/(T)precisionBetween0And1;}
 
 template <typename T>
 T Interval<T>::right() const
 {return (T)end/(T)precisionBetween0And1;}
-
-template <typename T>
-const std::set<std::string>& Interval<T>::getLabels() const
-{return labels;}
 
 template <typename T>
 void Interval<T>::setPrecision(int precision)
