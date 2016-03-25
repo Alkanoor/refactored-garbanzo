@@ -6,11 +6,8 @@
 #include "include/LoadAndSave.hpp"
 
 
-int main()
-{
-    srand(time(NULL));
 
-    /*std::vector<std::string> columns = {"SOURCE_BEGIN_MONTH","VOIE_DEPOT","LANGUAGE_OF_FILLING","COUNTRY","FISRT_APP_TYPE","APP_NB_PAYS"};
+/**std::vector<std::string> columns = {"SOURCE_BEGIN_MONTH","VOIE_DEPOT","LANGUAGE_OF_FILLING","COUNTRY","FISRT_APP_TYPE","APP_NB_PAYS"};
     columns = {"FISRT_APP_TYPE"};
 
     LoadAndSave<float> wrapper;
@@ -96,10 +93,135 @@ int main()
 
     wrapper.replaceAbnormalInFloat(behaviours);
     wrapper.saveDensity(columns, "densities.txt");
-    wrapper.saveCurrentFloat("floatFinal.txt");*/
+    wrapper.saveCurrentFloat("floatFinal.txt");**/
+
+void updateFloatData();
+void executeBigData();
+
+int main()
+{
+    srand(time(NULL));
+
+    updateFloatData();
+    //executeBigData();
+
+    return 0;
+}
+
+void updateFloatData()
+{
+    std::vector<std::string> columns = {"VOIE_DEPOT","COUNTRY","SOURCE_BEGIN_MONTH","APP_NB","APP_NB_PAYS","APP_NB_TYPE","FISRT_APP_COUNTRY","FISRT_APP_TYPE","LANGUAGE_OF_FILLING","FIRST_CLASSE","NB_CLASSES","NB_ROOT_CLASSES","NB_SECTORS","NB_FIELDS","TECHNOLOGIE_SECTOR","TECHNOLOGIE_FIELD","MAIN_IPC","INV_NB","INV_NB_PAYS","INV_NB_TYPE","FISRT_INV_COUNTRY","FISRT_INV_TYPE","cited_n","cited_nmiss","cited_age_min","cited_age_median","cited_age_max","cited_age_mean","cited_age_std","SOURCE_CITED_AGE","NB_BACKWARD_NPL","NB_BACKWARD_XY","NB_BACKWARD_I","NB_BACKWARD_AUTRE","NB_BACKWARD_PL","NB_BACKWARD","pct_NB_IPC","pct_NB_IPC_LY","oecd_NB_ROOT_CLASSES","oecd_NB_BACKWARD_PL","oecd_NB_BACKWARD_NPL","IDX_ORIGIN","SOURCE_IDX_ORI","IDX_RADIC","SOURCE_IDX_RAD","PRIORITY_MONTH","FILING_MONTH","PUBLICATION_MONTH","BEGIN_MONTH","VARIABLE_CIBLE"};
+
+    LoadAndSave<float> wrapper;
+
+    wrapper.loadRaw("../train.csv");
+    wrapper.chooseColumns(columns);
+    wrapper.randomShuffle();
+
+    std::set<std::string> unsetElements;
+    unsetElements.insert("");
+    unsetElements.insert("(MISSING)");
+
+    std::map<std::string, unsigned int> correspondances;
+    std::map<std::string,ConversionFunction<float> > conversionObjects;
+    std::map<std::string,std::function<float(std::string)> > conversionMap;
+
+    correspondances["VOIE_DEPOT"] = 3;
+    correspondances["COUNTRY"] = 3;
+    correspondances["SOURCE_BEGIN_MONTH"] = 3;
+    correspondances["APP_NB"] = 1;
+    correspondances["APP_NB_PAYS"] = 1;
+    correspondances["APP_NB_TYPE"] = 1;
+    correspondances["FISRT_APP_COUNTRY"] = 3;
+    correspondances["FISRT_APP_TYPE"] = 3;
+    correspondances["LANGUAGE_OF_FILLING"] = 3;
+    correspondances["FIRST_CLASSE"] = 3;
+    correspondances["NB_CLASSES"] = 1;
+    correspondances["NB_ROOT_CLASSES"] = 1;
+    correspondances["NB_SECTORS"] = 1;
+    correspondances["NB_FIELDS"] = 1;
+    correspondances["TECHNOLOGIE_SECTOR"] = 3;
+    correspondances["TECHNOLOGIE_FIELD"] = 3;
+    correspondances["MAIN_IPC"] = 3;
+    correspondances["INV_NB"] = 1;
+    correspondances["INV_NB_PAYS"] = 1;
+    correspondances["INV_NB_TYPE"] = 1;
+    correspondances["FISRT_INV_COUNTRY"] = 3;
+    correspondances["FISRT_INV_TYPE"] = 3;
+    correspondances["cited_n"] = 1;
+    correspondances["cited_nmiss"] = 1;
+    correspondances["cited_age_min"] = 1;
+    correspondances["cited_age_median"] = 1;
+    correspondances["cited_age_max"] = 1;
+    correspondances["cited_age_mean"] = 1;
+    correspondances["cited_age_std"] = 1;
+    correspondances["SOURCE_CITED_AGE"] = 3;
+    correspondances["NB_BACKWARD_NPL"] = 1;
+    correspondances["NB_BACKWARD_XY"] = 1;
+    correspondances["NB_BACKWARD_I"] = 1;
+    correspondances["NB_BACKWARD_AUTRE"] = 1;
+    correspondances["NB_BACKWARD_PL"] = 1;
+    correspondances["NB_BACKWARD"] = 1;
+    correspondances["pct_NB_IPC"] = 1;
+    correspondances["pct_NB_IPC_LY"] = 1;
+    correspondances["oecd_NB_ROOT_CLASSES"] = 1;
+    correspondances["oecd_NB_BACKWARD_PL"] = 1;
+    correspondances["oecd_NB_BACKWARD_NPL"] = 1;
+    correspondances["IDX_ORIGIN"] = 1;
+    correspondances["SOURCE_IDX_ORI"] = 3;
+    correspondances["IDX_RADIC"] = 1;
+    correspondances["SOURCE_IDX_RAD"] = 3;
+    correspondances["PRIORITY_MONTH"] = 2;
+    correspondances["FILING_MONTH"] = 2;
+    correspondances["PUBLICATION_MONTH"] = 2;
+    correspondances["BEGIN_MONTH"] = 2;
+    correspondances["VARIABLE_CIBLE"] = 3;
+
+    for(auto it=correspondances.begin(); it!=correspondances.end(); it++)
+        conversionObjects[it->first] = ConversionFunction<float>(it->second);
+
+    for(auto it=conversionObjects.begin(); it!=conversionObjects.end(); it++)
+    {
+        it->second.setUnknown(unsetElements);
+        conversionMap[it->first] = it->second.conversionFunction();
+    }
+
+    wrapper.setConversionArray(conversionMap);
+    wrapper.updateChosenColumns();
+
+    std::map<std::string, std::set<std::string> > labelsOfAbnormalForCols;
+    for(unsigned int i=0;i<columns.size();i++)
+        labelsOfAbnormalForCols[columns[i]] = unsetElements;
+
+    std::map<std::string,std::map<std::string,unsigned int> > abnormals = wrapper.countAbnormal(labelsOfAbnormalForCols);
+
+    for(auto it=abnormals.begin(); it!=abnormals.end(); it++)
+        std::cout<<it->first<<" => "<<it->second[""]<<" empty and "<<it->second["(MISSING)"]<<" missing"<<std::endl;
 
 
+    std::map<std::string,BEHAVIOUR> classBehaviour;
+    classBehaviour[""] = Other_class;
+    classBehaviour["(MISSING)"] = Other_class;
 
+    std::map<std::string,BEHAVIOUR> floatBehaviour;
+    floatBehaviour[""] = Mean_float;
+    floatBehaviour["(MISSING)"] = Mean_float;
+
+    std::map<std::string,std::map<std::string,BEHAVIOUR> > behaviours;
+    for(auto it=correspondances.begin(); it!=correspondances.end(); it++)
+        if(it->second>=3)
+            behaviours[it->first] = classBehaviour;
+        else
+            behaviours[it->first] = floatBehaviour;
+
+    wrapper.replaceAbnormalInFloat(behaviours);
+    wrapper.saveDensity(columns, "seriousAll/densities.txt");
+    wrapper.saveCurrentFloat("seriousAll/floatFinal.txt");
+    wrapper.saveTitles("seriousAll/titles.txt");
+}
+
+void executeBigData()
+{
     std::vector<std::string> columns = {"IDX_RADIC","VARIABLE_CIBLE"};
 
     LoadAndSave<float> wrapper;
@@ -107,6 +229,8 @@ int main()
     wrapper.loadFloat("serious/currentConverted.txt",2);
     wrapper.loadTitles("serious/titles.txt");
     wrapper.chooseColumns(columns);
+    wrapper.randomShuffleFloat();
+    wrapper.resize(0.1);
 
     /*wrapper.loadRaw("../train.csv");
     wrapper.chooseColumns(columns);
@@ -134,12 +258,12 @@ int main()
 
     wrapper.saveCurrentFloat("serious/currentConverted.txt");*/
 
-    std::array<std::string,1> cols = {"IDX_RADIC"};
-    std::vector<dlib::matrix<float,1,1> > samples;
+    std::array<std::string,2> cols = {"IDX_RADIC","VARIABLE_CIBLE"};
+    std::vector<dlib::matrix<float,2,1> > samples;
     std::vector<float> labels;
-    wrapper.convertToDlibMatrix<1>(cols,"VARIABLE_CIBLE",samples,labels);
+    wrapper.convertToDlibMatrix<2>(cols,"VARIABLE_CIBLE",samples,labels);
 
-    typedef dlib::matrix<float, 1, 1> sample_type;
+    typedef dlib::matrix<float, 2, 1> sample_type;
     typedef dlib::radial_basis_kernel<sample_type> kernel_type;
 
     using namespace dlib;
@@ -156,6 +280,8 @@ int main()
     // now normalize each sample
     for (unsigned long i = 0; i < samples.size(); ++i)
         samples[i] = normalizer(samples[i]);
+
+    std::cout<<"We have now "<<samples.size()<<" samples"<<std::endl;
 
 
     // Now that we have some data we want to train on it.  However, there are two
@@ -200,15 +326,6 @@ int main()
             cout << "     cross validation accuracy: " << cross_validate_trainer(trainer, samples, labels, 3);
         }
     }
-
-    /*template <size_t N>
-    void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels);*/
-
-
-    /*wrapper.loadTitles("titles.txt");
-    wrapper.loadFloat("currentConverted.txt", wrapper.getNumberColumnsRaw());*/
-
-    return 0;
 }
 
 

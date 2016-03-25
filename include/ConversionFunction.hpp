@@ -118,6 +118,7 @@ T ConversionFunction<T>::convertDate(std::string s)
 template <typename T>
 T ConversionFunction<T>::convertClassBasic(std::string s)
 {
+    std::cout<<index.size()<<" ";
     if(index.count(s))
     {
         counter[s]++;

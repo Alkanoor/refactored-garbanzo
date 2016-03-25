@@ -35,8 +35,10 @@ class LoadAndSave
         ///sauvegarde des titres des colonnes actuellement trait�es
         void saveTitles(const std::string& path);
 
-        ///mélange les données
+        ///mélange les données brutes
         void randomShuffle();
+        ///mélange les données flottantes
+        void randomShuffleFloat();
         ///cr�e des trous artificiels attendant d'�tre utilis�s plus tard
         void createHoles(std::map<std::string,float>& probaHolesInColumn);
         ///met � jour la map permettant de convertir les string en float selon des politiques d�finies en dehors de cette classe
@@ -58,6 +60,9 @@ class LoadAndSave
         ///convertit les donn�es en donn�es pour dlib
         template <size_t N>
         void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels);
+
+        void resize(float coeff);
+        void resizeFullSize();
 
         unsigned int getNumberRows() const;
         unsigned int getNumberColumnsRaw() const;
@@ -324,6 +329,26 @@ void LoadAndSave<T>::randomShuffle()
 }
 
 template <typename T>
+void LoadAndSave<T>::randomShuffleFloat()
+{
+    std::vector<unsigned int> permutation(N_features);
+    for(unsigned int i=0;i<N_features;i++)
+        permutation[i] = i;
+    std::random_shuffle(permutation.begin(),permutation.end());
+
+    for(unsigned int j=0;j<N_parameters;j++)
+    {
+        auto first = transformedDataColumnsOrdered[j].begin();
+        first++;
+        auto last = transformedDataColumnsOrdered[j].end();
+        auto n = last-first;
+        auto i = n-1;
+        for(; i>0; --i)
+            std::swap(first[i], first[permutation[i]]);
+    }
+}
+
+template <typename T>
 void LoadAndSave<T>::createHoles(std::map<std::string,float>& probaHolesInColumn)
 {
     for(unsigned int i=0;i<N_parameters;i++)
@@ -411,7 +436,7 @@ void LoadAndSave<T>::computeHistogramsOnChosenColumns(bool considerAbnormal)
                     counter[chosenColumns[i]][interval]++;
                 else
                     counter[chosenColumns[i]][interval] = 1;
-                if(!noHoleColumnsOrdered[col][j])
+                if(!noHoleColumnsOrdered[col][j]||rawDataColumnsOrdered[col][j+1]=="")
                     labels[chosenColumns[i]][interval].insert("(empty)");
                 else
                     labels[chosenColumns[i]][interval].insert(rawDataColumnsOrdered[col][j+1]);
@@ -551,6 +576,20 @@ void LoadAndSave<T>::convertToDlibMatrix(const std::array<std::string,N>& column
         else
             labels[j] = transformedDataColumnsOrdered[targetColumn][j];
     }
+}
+
+template <typename T>
+void LoadAndSave<T>::resize(float coeff)
+{
+    if(transformedDataColumnsOrdered.size()&&N_features*coeff<transformedDataColumnsOrdered[0].size())
+        N_features = N_features*coeff;
+}
+
+template <typename T>
+void LoadAndSave<T>::resizeFullSize()
+{
+    if(transformedDataColumnsOrdered.size())
+        N_features = transformedDataColumnsOrdered[0].size();
 }
 
 template <typename T>
