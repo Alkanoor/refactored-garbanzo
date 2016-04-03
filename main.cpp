@@ -102,8 +102,8 @@ int main()
 {
     srand(time(NULL));
 
-    updateFloatData();
-    //executeBigData();
+    //updateFloatData();
+    executeBigData();
 
     return 0;
 }
@@ -115,8 +115,12 @@ void updateFloatData()
     LoadAndSave<float> wrapper;
 
     wrapper.loadRaw("../train.csv");
+    //wrapper.loadRaw("tmpRaw.csv");
     wrapper.chooseColumns(columns);
     wrapper.randomShuffle();
+    //wrapper.resize(0.001);
+
+    //wrapper.saveCurrentRaw("tmpRaw.csv");
 
     std::set<std::string> unsetElements;
     unsetElements.insert("");
@@ -130,7 +134,7 @@ void updateFloatData()
     correspondances["COUNTRY"] = 3;
     correspondances["SOURCE_BEGIN_MONTH"] = 3;
     correspondances["APP_NB"] = 1;
-    correspondances["APP_NB_PAYS"] = 1;
+    correspondances["APP_NB_PAYS"] = 0;
     correspondances["APP_NB_TYPE"] = 1;
     correspondances["FISRT_APP_COUNTRY"] = 3;
     correspondances["FISRT_APP_TYPE"] = 3;
@@ -222,12 +226,12 @@ void updateFloatData()
 
 void executeBigData()
 {
-    std::vector<std::string> columns = {"IDX_RADIC","VARIABLE_CIBLE"};
+    std::vector<std::string> columns = {"VOIE_DEPOT","COUNTRY","SOURCE_BEGIN_MONTH","APP_NB","APP_NB_PAYS","APP_NB_TYPE","FISRT_APP_COUNTRY","FISRT_APP_TYPE","LANGUAGE_OF_FILLING","FIRST_CLASSE","NB_CLASSES","NB_ROOT_CLASSES","NB_SECTORS","NB_FIELDS","TECHNOLOGIE_SECTOR","TECHNOLOGIE_FIELD","MAIN_IPC","INV_NB","INV_NB_PAYS","INV_NB_TYPE","FISRT_INV_COUNTRY","FISRT_INV_TYPE","cited_n","cited_nmiss","cited_age_min","cited_age_median","cited_age_max","cited_age_mean","cited_age_std","SOURCE_CITED_AGE","NB_BACKWARD_NPL","NB_BACKWARD_XY","NB_BACKWARD_I","NB_BACKWARD_AUTRE","NB_BACKWARD_PL","NB_BACKWARD","pct_NB_IPC","pct_NB_IPC_LY","oecd_NB_ROOT_CLASSES","oecd_NB_BACKWARD_PL","oecd_NB_BACKWARD_NPL","IDX_ORIGIN","SOURCE_IDX_ORI","IDX_RADIC","SOURCE_IDX_RAD","PRIORITY_MONTH","FILING_MONTH","PUBLICATION_MONTH","BEGIN_MONTH","VARIABLE_CIBLE"};
 
     LoadAndSave<float> wrapper;
 
-    wrapper.loadFloat("serious/currentConverted.txt",2);
-    wrapper.loadTitles("serious/titles.txt");
+    wrapper.loadFloat("seriousAll/floatFinal.txt",columns.size());
+    wrapper.loadTitles("seriousAll/titles.txt");
     wrapper.chooseColumns(columns);
     wrapper.randomShuffleFloat();
     wrapper.resize(0.1);
@@ -258,12 +262,13 @@ void executeBigData()
 
     wrapper.saveCurrentFloat("serious/currentConverted.txt");*/
 
-    std::array<std::string,2> cols = {"IDX_RADIC","VARIABLE_CIBLE"};
-    std::vector<dlib::matrix<float,2,1> > samples;
-    std::vector<float> labels;
-    wrapper.convertToDlibMatrix<2>(cols,"VARIABLE_CIBLE",samples,labels);
+    std::array<std::string,32> cols = {"VOIE_DEPOT","COUNTRY","APP_NB","APP_NB_PAYS","APP_NB_TYPE","FISRT_APP_COUNTRY","FISRT_APP_TYPE","LANGUAGE_OF_FILLING","NB_CLASSES","NB_SECTORS","NB_FIELDS","TECHNOLOGIE_SECTOR","MAIN_IPC","INV_NB","INV_NB_PAYS","cited_n","cited_age_median","SOURCE_CITED_AGE","NB_BACKWARD_XY","NB_BACKWARD_PL","NB_BACKWARD","pct_NB_IPC","pct_NB_IPC_LY","oecd_NB_ROOT_CLASSES","oecd_NB_BACKWARD_PL","oecd_NB_BACKWARD_NPL","IDX_ORIGIN","SOURCE_IDX_ORI","IDX_RADIC","SOURCE_IDX_RAD","FILING_MONTH","PUBLICATION_MONTH"};
 
-    typedef dlib::matrix<float, 2, 1> sample_type;
+    std::vector<dlib::matrix<float,32,1> > samples;
+    std::vector<float> labels;
+    wrapper.convertToDlibMatrix<32>(cols,"VARIABLE_CIBLE",samples,labels);
+
+    typedef dlib::matrix<float, 32, 1> sample_type;
     typedef dlib::radial_basis_kernel<sample_type> kernel_type;
 
     using namespace dlib;
@@ -297,6 +302,8 @@ void executeBigData()
     randomize_samples(samples, labels);
 
 
+    /**Useful to find best parameters
+
     // The nu parameter has a maximum value that is dependent on the ratio of the +1 to -1
     // labels in the training data.  This function finds that value.
     const double max_nu = maximum_nu(labels);
@@ -325,7 +332,55 @@ void executeBigData()
             // examples correctly classified.
             cout << "     cross validation accuracy: " << cross_validate_trainer(trainer, samples, labels, 3);
         }
+    }**/
+
+
+    double gamma = 0.03125;
+    double nu = 0.03125;
+    svm_nu_trainer<kernel_type> trainer;
+    trainer.set_kernel(kernel_type(gamma));
+    trainer.set_nu(nu);
+
+    typedef probabilistic_decision_function<kernel_type> probabilistic_funct_type;
+    typedef normalized_function<probabilistic_funct_type> pfunct_type;
+
+    pfunct_type learned_pfunct;
+    learned_pfunct.normalizer = normalizer;
+    learned_pfunct.function = train_probabilistic_decision_function(trainer, samples, labels, 3);
+    //deserialize("saved_function.dat")>>learned_pfunct;
+
+    std::cout<<"number of support vectors in our learned_function is "<<learned_pfunct.function.decision_funct.basis_vectors.size()<<std::endl;
+
+    serialize("saved_function.dat")<<learned_pfunct;
+
+    std::cout<<wrapper.getNumberRows()<<std::endl;
+    wrapper.resize(10);
+    std::cout<<wrapper.getNumberRows()<<std::endl;
+
+    int okTrue = 0, okFalse = 0, FalsePredictedTrue = 0, TruePredictedFalse = 0;
+    float floatingScore = 0;
+    for(unsigned int i=0;i<wrapper.getNumberRows();i++)
+    {
+        dlib::matrix<float,32,1> sample;
+        int r = wrapper.getRow<32>(i,cols,"VARIABLE_CIBLE",sample);
+        double predicted = learned_pfunct(sample);
+        if(r==1&&predicted>=0.5)
+            okTrue++;
+        else if(r==1)
+            TruePredictedFalse++;
+        else if(predicted>=0.5)
+            FalsePredictedTrue++;
+        else
+            okFalse++;
+        floatingScore += fabs(r-predicted);
     }
+
+    std::cout<<"Final score : "<<std::endl;
+    std::cout<<okTrue<<"true positive"<<std::endl;
+    std::cout<<okFalse<<"true negative"<<std::endl;
+    std::cout<<FalsePredictedTrue<<"false positive"<<std::endl;
+    std::cout<<TruePredictedFalse<<"false negative"<<std::endl;
+    std::cout<<"Floating score : "<<1-floatingScore<<std::endl;
 }
 
 

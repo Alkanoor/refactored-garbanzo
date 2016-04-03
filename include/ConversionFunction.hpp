@@ -38,6 +38,8 @@ class ConversionFunction
         void resetType(int type);
 
     private:
+        int t;
+        int type;
         T n;
         T mean;
         T lastValue;
@@ -118,7 +120,6 @@ T ConversionFunction<T>::convertDate(std::string s)
 template <typename T>
 T ConversionFunction<T>::convertClassBasic(std::string s)
 {
-    std::cout<<index.size()<<" ";
     if(index.count(s))
     {
         counter[s]++;
@@ -173,25 +174,26 @@ void ConversionFunction<T>::reset()
 template <typename T>
 void ConversionFunction<T>::resetType(int type)
 {
+    this->type = type;
     switch(type)
     {
         case 0:
-            func = std::bind(&ConversionFunction<T>::convertBasic,this,std::placeholders::_1);
+            func = std::bind(ConversionFunction<T>::convertBasic,*this,std::placeholders::_1);
             break;
         case 1:
-            func = std::bind(&ConversionFunction<T>::convertWithMean,this,std::placeholders::_1);
+            func = std::bind(ConversionFunction<T>::convertWithMean,*this,std::placeholders::_1);
             break;
         case 2:
-            func = std::bind(&ConversionFunction<T>::convertDate,this,std::placeholders::_1);
+            func = std::bind(ConversionFunction<T>::convertDate,*this,std::placeholders::_1);
             break;
         case 3:
-            func = std::bind(&ConversionFunction<T>::convertClassBasic,this,std::placeholders::_1);
+            func = std::bind(ConversionFunction<T>::convertClassBasic,*this,std::placeholders::_1);
             break;
         case 4:
-            func = std::bind(&ConversionFunction<T>::convertClassHamming,this,std::placeholders::_1);
+            func = std::bind(ConversionFunction<T>::convertClassHamming,*this,std::placeholders::_1);
             break;
         default:
-            func = std::bind(&ConversionFunction<T>::convertBasic,this,std::placeholders::_1);
+            func = std::bind(ConversionFunction<T>::convertBasic,*this,std::placeholders::_1);
             break;
     }
 }

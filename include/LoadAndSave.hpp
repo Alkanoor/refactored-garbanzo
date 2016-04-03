@@ -60,6 +60,9 @@ class LoadAndSave
         ///convertit les donn�es en donn�es pour dlib
         template <size_t N>
         void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels);
+        ///avec une seule ligne
+        template <size_t N>
+        int getRow(int index, const std::array<std::string,N>& columns, const std::string& labelColumn, dlib::matrix<T,N,1>& sample);
 
         void resize(float coeff);
         void resizeFullSize();
@@ -571,11 +574,41 @@ void LoadAndSave<T>::convertToDlibMatrix(const std::array<std::string,N>& column
         for(unsigned int i=0;i<N;i++)
             tmp(i) = transformedDataColumnsOrdered[corresp[i]][j];
         samples[j] = tmp;
-        if(transformedDataColumnsOrdered[targetColumn][j]>1)
+        std::cout<<transformedDataColumnsOrdered[targetColumn][j]<<" "<<rawDataColumnsOrdered[targetColumn][j]<<";";
+        if(rawDataColumnsOrdered[targetColumn][j]=="")
+            labels[j] = 1;
+        else if(rawDataColumnsOrdered[targetColumn][j]=="")
             labels[j] = -1;
         else
-            labels[j] = transformedDataColumnsOrdered[targetColumn][j];
+            if(transformedDataColumnsOrdered[targetColumn][j]>1)
+                labels[j] = -1;
+            else
+                labels[j] = transformedDataColumnsOrdered[targetColumn][j];
     }
+}
+
+template <typename T>
+template <size_t N>
+int LoadAndSave<T>::getRow(int index, const std::array<std::string,N>& columns, const std::string& labelColumn, dlib::matrix<T,N,1>& sample)
+{
+    if(transformedDataColumnsOrdered.size()&&index<(int)transformedDataColumnsOrdered[0].size())
+    {
+        for(unsigned int i=0;i<N;i++)
+            sample(i) = transformedDataColumnsOrdered[columnNamesCorrespondances[columns[i]]][index];
+
+        unsigned int targetColumn = columnNamesCorrespondances[labelColumn];
+        std::cout<<rawDataColumnsOrdered[targetColumn][index]<<std::endl;
+        if(rawDataColumnsOrdered[targetColumn][index]=="")
+            return 1;
+        else if(rawDataColumnsOrdered[targetColumn][index]=="")
+            return -1;
+        else
+            if(transformedDataColumnsOrdered[targetColumn][index]>1)
+                return -1;
+            else
+                return transformedDataColumnsOrdered[targetColumn][index];
+    }
+    return -1;
 }
 
 template <typename T>
