@@ -6,9 +6,10 @@ Pour convertir les données de manière entièrement contrôlée, j'ai codé moi
 Pour convertir les données initiales (test.csv et train.csv), **il faut les placer dans ce dossier**.
 
 Pour compiler, éxecuter **make**.
-Pour convertir les données, éxecuter **make convert**.
+Pour convertir les données, éxecuter **make convert** (cela placera le résultat dans le dossier data (non présent au départ)).
 Pour éxecuter le code python à partir des données générées, il faut éxecuter **make python**.
 Pour éxecuter le code python qui trouve les meilleurs paramètres avec le modèle utilisé, il faut éxecuter **make find_best_parameters**.
+Pour rendre le dépôt propre, **make clean** (supprime ce qui est généré lors de la compilation ainsi que les données converties).
 
 L'explication est donnée dans le fichier compte_rendu.pdf.
 
