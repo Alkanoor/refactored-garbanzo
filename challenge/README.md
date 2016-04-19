@@ -8,7 +8,7 @@ Pour convertir les données initiales (test.csv et train.csv), **il faut les pla
 Pour compiler, éxecuter **make**.
 Pour convertir les données, éxecuter **make convert**.
 Pour éxecuter le code python à partir des données générées, il faut éxecuter **make python**.
-Pour éxecuter le code python qui trouve les meilleurs paramètres avec le modèle utilisé, il faut éxecuter **find_best_parameters**
+Pour éxecuter le code python qui trouve les meilleurs paramètres avec le modèle utilisé, il faut éxecuter **make find_best_parameters**.
 
 L'explication est donnée dans le fichier compte_rendu.pdf.
 
