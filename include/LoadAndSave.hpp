@@ -34,6 +34,10 @@ class LoadAndSave
         void saveCurrentFloat(const std::string& path);
         ///sauvegarde des titres des colonnes actuellement trait�es
         void saveTitles(const std::string& path);
+        ///sauvegarde les flottants sous format raw pour possibilité de réutilisation ultérieure avec pandas
+        void saveCurrentFloatAsRaw(const std::string& path);
+        ///sauvegarde les flottants catégorisés sous format raw pour possibilité de réutilisation ultérieure avec pandas
+        void saveCurrentFloatCategorizedAsRaw(const std::string& path);
 
         ///mélange les données brutes
         void randomShuffle();
@@ -54,9 +58,16 @@ class LoadAndSave
         void computeHistogramsOnChosenColumns(bool considerAbnormal = false);
         ///remplace les donn�es "anormales" par d'autres donn�es en fonction d'une politique parmi 3 se basant sur la fr�quence de ces anomalies
         void replaceAbnormalInFloat(std::map<std::string,std::map<std::string,BEHAVIOUR> >& behaviour);
+        ///remplace les données "anormales" par d'autres données, sans recalculer l'histogramme et en se basant sur les correspondances précédentes
+        void replaceAbnormalInFloatWithPreviousComputed();
 
         ///�crit dans le fichier associ� les histogrammes des colonnes actuellement trait�es et les donn�es anormales remarqu�es
         void saveDensity(const std::vector<std::string>& columns, const std::string& path);
+        ///renvoie les colonnes possiblement catégorisables
+        std::vector<std::pair<std::string,int> > columnsWhichCouldBeCategorized(int threshold);
+        ///crée la matrice flottante avec la catégorisation des variables souhaitées
+        void categorize(const std::set<std::string>& toCategorize);
+
         ///convertit les donn�es en donn�es pour dlib
         template <size_t N>
         void convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels);
@@ -84,6 +95,11 @@ class LoadAndSave
         std::map<std::string,std::map<Interval<T>, unsigned int> > counter;
         std::map<std::string,Histogram<T> > histograms;
         std::map<std::string,std::map<std::string,T> > correspondancesForAbnormal;
+
+        std::vector<bool> isCategorized;
+        std::vector<std::string> columnNamesCategorized;
+        std::vector<std::string> correspondancesForCategorized;
+        std::vector<int> columnsCorrespondancesForCategorized;
 
         unsigned int N_features;
         unsigned int N_parameters;
@@ -312,6 +328,81 @@ void LoadAndSave<T>::saveTitles(const std::string& path)
 }
 
 template <typename T>
+void LoadAndSave<T>::saveCurrentFloatAsRaw(const std::string& path)
+{
+    std::ofstream ofs(path.c_str(),std::ios::out|std::ios::trunc);
+    for(unsigned int i=0;i<chosenColumns.size();i++)
+    {
+        if(i<chosenColumns.size()-1)
+            ofs<<columnNames[columnNamesCorrespondances[chosenColumns[i]]]<<";";
+        else
+            ofs<<columnNames[columnNamesCorrespondances[chosenColumns[i]]];
+    }
+
+    ofs<<std::endl;
+
+    std::vector<unsigned int> index(chosenColumns.size());
+    for(unsigned int i=0;i<chosenColumns.size();i++)
+        index[i] = columnNamesCorrespondances[chosenColumns[i]];
+
+    for(unsigned int i=0;i<N_features;i++)
+    {
+        for(unsigned int j=0;j<chosenColumns.size();j++)
+            if(noHoleColumnsOrdered[index[j]][i]||correspondancesForAbnormal[chosenColumns[j]].count(""))
+            {
+                if(j<index.size()-1)
+                    ofs<<transformedDataColumnsOrdered[index[j]][i]<<";";
+                else
+                    ofs<<transformedDataColumnsOrdered[index[j]][i];
+            }
+            else
+                if(j<index.size()-1)
+                    ofs<<"-999999999 ";
+                else
+                    ofs<<"-999999999";
+        ofs<<std::endl;
+    }
+    ofs.close();
+}
+
+template <typename T>
+void LoadAndSave<T>::saveCurrentFloatCategorizedAsRaw(const std::string& path)
+{
+    std::ofstream ofs(path.c_str(),std::ios::out|std::ios::trunc);
+    for(unsigned int i=0;i<columnNamesCategorized.size();i++)
+    {
+        if(i<columnNamesCategorized.size()-1)
+            ofs<<columnNamesCategorized[i]<<";";
+        else
+            ofs<<columnNamesCategorized[i];
+    }
+
+    ofs<<std::endl;
+
+    for(unsigned int i=0;i<N_features;i++)
+    {
+        for(unsigned int j=0;j<columnNamesCategorized.size();j++)
+        {
+            float val = 0;
+            if(isCategorized[j])
+            {
+                if(rawDataColumnsOrdered[columnsCorrespondancesForCategorized[j]][i+1]==correspondancesForCategorized[j])
+                    val = 1;
+            }
+            else
+                val = transformedDataColumnsOrdered[columnsCorrespondancesForCategorized[j]][i];
+
+            if(j<columnNamesCategorized.size()-1)
+                ofs<<val<<";";
+            else
+                ofs<<val;
+        }
+        ofs<<std::endl;
+    }
+    ofs.close();
+}
+
+template <typename T>
 void LoadAndSave<T>::randomShuffle()
 {
     std::vector<unsigned int> permutation(N_features);
@@ -535,6 +626,24 @@ void LoadAndSave<T>::replaceAbnormalInFloat(std::map<std::string,std::map<std::s
 }
 
 template <typename T>
+void LoadAndSave<T>::replaceAbnormalInFloatWithPreviousComputed()
+{
+    updateChosenColumns();
+    for(unsigned int i=0;i<chosenColumns.size();i++)
+    {
+        unsigned int col = columnNamesCorrespondances[chosenColumns[i]];
+        for(unsigned int j=0;j<N_features;j++)
+            if(abnormal[chosenColumns[i]].count(rawDataColumnsOrdered[col][j+1]))
+            {
+                if(correspondancesForAbnormal[chosenColumns[i]].count(rawDataColumnsOrdered[col][j+1]))
+                    transformedDataColumnsOrdered[col][j] = correspondancesForAbnormal[chosenColumns[i]][rawDataColumnsOrdered[col][j+1]];
+            }
+            else if(!noHoleColumnsOrdered[col][j]&&abnormal[chosenColumns[i]].count(""))
+                transformedDataColumnsOrdered[col][j] = correspondancesForAbnormal[chosenColumns[i]][""];
+    }
+}
+
+template <typename T>
 void LoadAndSave<T>::saveDensity(const std::vector<std::string>& columns, const std::string& path)
 {
     std::ofstream ofs(path.c_str(),std::ios::out);
@@ -558,6 +667,58 @@ void LoadAndSave<T>::saveDensity(const std::vector<std::string>& columns, const 
 }
 
 template <typename T>
+std::vector<std::pair<std::string,int> > LoadAndSave<T>::columnsWhichCouldBeCategorized(int threshold)
+{
+    std::vector<std::pair<std::string,int> > ret;
+    for(unsigned int i=0;i<columnNames.size();i++)
+        if(histograms.count(columnNames[i]))
+            if((int)histograms[columnNames[i]].getNumberSubdivisions()<=threshold)
+                ret.push_back(std::pair<std::string,int>(columnNames[i],histograms[columnNames[i]].getNumberSubdivisions()));
+    return ret;
+}
+
+template <typename T>
+void LoadAndSave<T>::categorize(const std::set<std::string>& toCategorize)
+{
+    std::vector<unsigned int> index(chosenColumns.size());
+    for(unsigned int i=0;i<chosenColumns.size();i++)
+        index[i] = columnNamesCorrespondances[chosenColumns[i]];
+
+    int curSize = 0;
+    for(unsigned int i=0;i<chosenColumns.size();i++)
+        if(toCategorize.count(chosenColumns[i])) //on crée toutes les colonnes supplémentaires sur le tas
+        {
+            std::cout<<"Columns "<<chosenColumns[i]<<" will be categorized"<<std::endl;
+            int begIndex = curSize;
+            int endIndex = begIndex;
+            std::set<std::string> curIndex;
+            for(unsigned int j=0;j<N_features;j++)
+                if(!curIndex.count(rawDataColumnsOrdered[index[i]][j+1]))
+                {
+                    curIndex.insert(rawDataColumnsOrdered[index[i]][j+1]);
+                    endIndex++;
+                    std::ostringstream oss;
+                    oss<<endIndex-begIndex;
+                    columnNamesCategorized.push_back(chosenColumns[i]+"_"+oss.str());
+                    correspondancesForCategorized.push_back(rawDataColumnsOrdered[index[i]][j+1]);
+                    columnsCorrespondancesForCategorized.push_back(index[i]);
+                    isCategorized.push_back(true);
+                }
+            std::cout<<"New size : "<<endIndex<<std::endl;
+            curSize = endIndex;
+        }
+        else
+        {
+            columnNamesCategorized.push_back(chosenColumns[i]);
+            correspondancesForCategorized.push_back("");
+            columnsCorrespondancesForCategorized.push_back(index[i]);
+            isCategorized.push_back(false);
+            curSize++;
+            std::cout<<"New size : "<<curSize<<std::endl;
+        }
+}
+
+template <typename T>
 template <size_t N>
 void LoadAndSave<T>::convertToDlibMatrix(const std::array<std::string,N>& columns, const std::string& labelColumn, std::vector<dlib::matrix<T,N,1> >& samples, std::vector<T>& labels)
 {
@@ -574,11 +735,14 @@ void LoadAndSave<T>::convertToDlibMatrix(const std::array<std::string,N>& column
         for(unsigned int i=0;i<N;i++)
             tmp(i) = transformedDataColumnsOrdered[corresp[i]][j];
         samples[j] = tmp;
-        std::cout<<transformedDataColumnsOrdered[targetColumn][j]<<" "<<rawDataColumnsOrdered[targetColumn][j]<<";";
-        if(rawDataColumnsOrdered[targetColumn][j]=="")
-            labels[j] = 1;
-        else if(rawDataColumnsOrdered[targetColumn][j]=="")
-            labels[j] = -1;
+
+        if(targetColumn<rawDataColumnsOrdered.size())
+        {
+            if(rawDataColumnsOrdered[targetColumn][j]=="GRANTED")
+                labels[j] = 1;
+            else if(rawDataColumnsOrdered[targetColumn][j]=="NOT_GRANTED")
+                labels[j] = -1;
+        }
         else
             if(transformedDataColumnsOrdered[targetColumn][j]>1)
                 labels[j] = -1;
@@ -597,14 +761,16 @@ int LoadAndSave<T>::getRow(int index, const std::array<std::string,N>& columns, 
             sample(i) = transformedDataColumnsOrdered[columnNamesCorrespondances[columns[i]]][index];
 
         unsigned int targetColumn = columnNamesCorrespondances[labelColumn];
-        std::cout<<rawDataColumnsOrdered[targetColumn][index]<<std::endl;
-        if(rawDataColumnsOrdered[targetColumn][index]=="")
-            return 1;
-        else if(rawDataColumnsOrdered[targetColumn][index]=="")
-            return -1;
+        if(targetColumn<rawDataColumnsOrdered.size())
+        {
+            if(rawDataColumnsOrdered[targetColumn][index]=="GRANTED")
+                return 1;
+            else if(rawDataColumnsOrdered[targetColumn][index]=="NOT_GRANTED")
+                return -1;
+        }
         else
             if(transformedDataColumnsOrdered[targetColumn][index]>1)
-                return -1;
+                 return -1;
             else
                 return transformedDataColumnsOrdered[targetColumn][index];
     }

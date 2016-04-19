@@ -24,6 +24,8 @@ class Histogram
 
         void setLastLabels(const std::set<std::string>& labels);
 
+        unsigned int getNumberSubdivisions() const;
+
         template <typename U>
         friend std::ostream& operator << (std::ostream& cur, const Histogram<U>& h);
 
@@ -152,6 +154,10 @@ T Histogram<T>::getMean(float freq)
 template <typename T>
 void Histogram<T>::setLastLabels(const std::set<std::string>& labels)
 {lastLabels = labels;}
+
+template <typename T>
+unsigned int Histogram<T>::getNumberSubdivisions() const
+{return intervals.size();}
 
 template <typename T>
 std::ostream& operator << (std::ostream& cur, const Histogram<T>& h)

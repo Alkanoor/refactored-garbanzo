@@ -102,8 +102,8 @@ int main()
 {
     srand(time(NULL));
 
-    //updateFloatData();
-    executeBigData();
+    updateFloatData();
+    //executeBigData();
 
     return 0;
 }
@@ -117,7 +117,7 @@ void updateFloatData()
     wrapper.loadRaw("../train.csv");
     //wrapper.loadRaw("tmpRaw.csv");
     wrapper.chooseColumns(columns);
-    wrapper.randomShuffle();
+    //wrapper.randomShuffle();
     //wrapper.resize(0.001);
 
     //wrapper.saveCurrentRaw("tmpRaw.csv");
@@ -219,9 +219,33 @@ void updateFloatData()
             behaviours[it->first] = floatBehaviour;
 
     wrapper.replaceAbnormalInFloat(behaviours);
-    wrapper.saveDensity(columns, "seriousAll/densities.txt");
+
+    std::vector<std::pair<std::string,int> > tmp = wrapper.columnsWhichCouldBeCategorized(130);
+    for(unsigned int i=0;i<tmp.size();i++)
+        std::cout<<tmp[i].first<<" "<<tmp[i].second<<std::endl;
+
+    std::set<std::string> toCategorize = {"COUNTRY","FISRT_APP_COUNTRY","FISRT_APP_TYPE","LANGUAGE_OF_FILLING","TECHNOLOGIE_SECTOR","TECHNOLOGIE_FIELD","FISRT_INV_COUNTRY","FISRT_INV_TYPE","VARIABLE_CIBLE"};
+    wrapper.categorize(toCategorize);
+    //wrapper.saveCurrentFloatCategorizedAsRaw("seriousAll/floatCategorized.csv");
+
+    /*wrapper.saveDensity(columns, "seriousAll/densities.txt");
     wrapper.saveCurrentFloat("seriousAll/floatFinal.txt");
     wrapper.saveTitles("seriousAll/titles.txt");
+    wrapper.saveCurrentFloatAsRaw("seriousAll/train.csv");*/
+
+    columns.resize(columns.size()-1);
+    wrapper.loadRaw("../test.csv");
+    wrapper.chooseColumns(columns);
+    //wrapper.randomShuffle();
+
+    wrapper.updateChosenColumns();
+    abnormals = wrapper.countAbnormal(labelsOfAbnormalForCols);
+
+    for(auto it=abnormals.begin(); it!=abnormals.end(); it++)
+        std::cout<<it->first<<" => "<<it->second[""]<<" empty and "<<it->second["(MISSING)"]<<" missing"<<std::endl;
+
+    wrapper.replaceAbnormalInFloatWithPreviousComputed();
+    wrapper.saveCurrentFloatCategorizedAsRaw("seriousAll/floatCategorizedTest.csv");
 }
 
 void executeBigData()
@@ -234,7 +258,9 @@ void executeBigData()
     wrapper.loadTitles("seriousAll/titles.txt");
     wrapper.chooseColumns(columns);
     wrapper.randomShuffleFloat();
-    wrapper.resize(0.1);
+    wrapper.resize(0.2);
+
+    std::cout<<"Basic operations ended"<<std::endl;
 
     /*wrapper.loadRaw("../train.csv");
     wrapper.chooseColumns(columns);
@@ -335,8 +361,10 @@ void executeBigData()
     }**/
 
 
-    double gamma = 0.03125;
-    double nu = 0.03125;
+    double gamma = 0.00005;
+    double nu = 0.78125;
+    const double max_nu = maximum_nu(labels);
+    std::cout<<"Max nu :"<<max_nu<<std::endl;
     svm_nu_trainer<kernel_type> trainer;
     trainer.set_kernel(kernel_type(gamma));
     trainer.set_nu(nu);
@@ -380,7 +408,7 @@ void executeBigData()
     std::cout<<okFalse<<"true negative"<<std::endl;
     std::cout<<FalsePredictedTrue<<"false positive"<<std::endl;
     std::cout<<TruePredictedFalse<<"false negative"<<std::endl;
-    std::cout<<"Floating score : "<<1-floatingScore<<std::endl;
+    std::cout<<"Floating score : "<<(float)(wrapper.getNumberRows()-floatingScore)/(float)(wrapper.getNumberRows())<<std::endl;
 }
 
 
